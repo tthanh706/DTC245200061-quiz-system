@@ -1,0 +1,113 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7fb;
+  color: #1e293b;
+}
+
+.header {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: white;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+}
+
+.container {
+  width: min(1000px, 92%);
+  margin: 30px auto;
+}
+
+.card {
+  background: white;
+  padding: 28px;
+  border-radius: 14px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.quiz-item,
+.question {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 15px 0;
+}
+
+.answer {
+  display: block;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 7px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.answer:hover {
+  background: #eff6ff;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group input {
+  width: 100%;
+  max-width: 450px;
+  display: block;
+  margin-top: 8px;
+  padding: 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+button,
+.secondary-button {
+  display: inline-block;
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 7px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:hover,
+.secondary-button:hover {
+  background: #1d4ed8;
+}
+
+.actions {
+  margin-top: 20px;
+}
+
+.result-box {
+  margin-top: 30px;
+  padding: 20px;
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+th {
+  background: #eff6ff;
+}

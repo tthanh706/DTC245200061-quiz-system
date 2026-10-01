@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kết quả thi</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <header class="header">
+      <h1>KẾT QUẢ THI</h1>
+    </header>
+
+    <main class="container">
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Họ tên</th>
+              <th>Bài thi</th>
+              <th>Số câu đúng</th>
+              <th>Điểm</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+
+          <tbody id="result-list"></tbody>
+        </table>
+
+        <br />
+
+        <a href="/" class="secondary-button"> Trang chủ </a>
+      </div>
+    </main>
+
+    <script>
+      async function loadResults() {
+        const response = await fetch("/api/results");
+        const results = await response.json();
+
+        const container = document.getElementById("result-list");
+
+        container.innerHTML = "";
+
+        results.forEach((item, index) => {
+          container.innerHTML += `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.student_name}</td>
+            <td>${item.title}</td>
+            <td>
+              ${item.correct_answers}/${item.total_questions}
+            </td>
+            <td>${item.score}</td>
+            <td>
+              ${new Date(item.created_at).toLocaleString()}
+            </td>
+          </tr>
+        `;
+        });
+      }
+
+      loadResults();
+    </script>
+  </body>
+</html>
