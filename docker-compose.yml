@@ -1,0 +1,237 @@
+name: quiz-system
+
+services:
+  mysql:
+    image: mysql:8.0.45
+    container_name: quiz-mysql
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    networks:
+      - backend
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-p${MYSQL_ROOT_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: quiz-phpmyadmin
+
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+
+    ports:
+      - "8081:80"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - backend
+
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ./app
+
+    container_name: quiz-app
+
+    environment:
+      DB_HOST: mysql
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE}
+
+    volumes:
+      - ./logs/app:/app/logs
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - frontend
+      - backend
+
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: quiz-nginx
+
+    ports:
+      - "8088:80"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/nginx:/var/log/nginx
+
+    depends_on:
+      - app
+
+    networks:
+      - frontend
+
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: quiz-prometheus
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+    ports:
+      - "9090:9090"
+
+    networks:
+      - monitoring
+
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.12
+    container_name: quiz-grafana
+
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: Grafana2026Secure
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+    ports:
+      - "3001:3000"
+
+    networks:
+      - monitoring
+
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: quiz-cadvisor
+
+    privileged: true
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+
+    networks:
+      - monitoring
+
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: quiz-node-exporter
+
+    networks:
+      - monitoring
+
+    restart: unless-stopped
+
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    platform: linux/amd64
+    container_name: quiz-mysql-exporter
+
+    command:
+      - "--config.my-cnf=/cfg/.my.cnf"
+
+    volumes:
+      - ./mysql/exporter.cnf:/cfg/.my.cnf:ro
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - backend
+      - monitoring
+
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: quiz-loki
+
+    command:
+      - "-config.file=/etc/loki/local-config.yaml"
+
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+
+    ports:
+      - "3100:3100"
+
+    networks:
+      - monitoring
+
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: quiz-promtail
+
+    command:
+      - "-config.file=/etc/promtail/config.yml"
+
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./logs/app:/var/log/quiz:ro
+      - ./logs/nginx:/var/log/nginx:ro
+
+    depends_on:
+      - loki
+
+    networks:
+      - monitoring
+
+    restart: unless-stopped
+
+networks:
+  frontend:
+
+  backend:
+    internal: true
+
+  monitoring:
+
+volumes:
+  mysql-data:
+
+  prometheus-data:
+
+  grafana-data:
+
+  loki-data:
