@@ -3,63 +3,128 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kết quả thi</title>
+    <title>Kết quả của tôi</title>
     <link rel="stylesheet" href="style.css" />
   </head>
 
   <body>
     <header class="header">
-      <h1>KẾT QUẢ THI</h1>
+      <h1>KẾT QUẢ CỦA TÔI</h1>
     </header>
 
     <main class="container">
       <div class="card">
-        <table>
-          <thead>
-            <tr>
-              <th>STT</th>
-              <th>Họ tên</th>
-              <th>Bài thi</th>
-              <th>Số câu đúng</th>
-              <th>Điểm</th>
-              <th>Thời gian</th>
-            </tr>
-          </thead>
+        <div class="student-section-title">
+          <div>
+            <h2>Lịch sử làm bài</h2>
+            <p id="result-user"></p>
+          </div>
+        </div>
 
-          <tbody id="result-list"></tbody>
-        </table>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Họ tên khi làm bài</th>
+                <th>Bài thi</th>
+                <th>Số câu đúng</th>
+                <th>Điểm</th>
+                <th>Thời gian</th>
+              </tr>
+            </thead>
+
+            <tbody id="result-list">
+              <tr>
+                <td colspan="6">Đang tải dữ liệu...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <br />
 
-        <a href="/" class="secondary-button"> Trang chủ </a>
+        <button onclick="goHome()">Trang chủ</button>
       </div>
     </main>
 
     <script>
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user) {
+        window.location.href = "/login.html";
+      }
+
+      if (user && user.role !== "student") {
+        window.location.href = "/admin-dashboard.html";
+      }
+
+      document.getElementById("result-user").textContent =
+        "Sinh viên: " + user.full_name;
+
       async function loadResults() {
-        const response = await fetch("/api/results");
-        const results = await response.json();
+        try {
+          const response = await fetch(`/api/my-results/${user.id}`);
+          const results = await response.json();
 
-        const container = document.getElementById("result-list");
+          const container = document.getElementById("result-list");
+          container.innerHTML = "";
 
-        container.innerHTML = "";
+          if (!response.ok) {
+            container.innerHTML = `
+            <tr>
+              <td colspan="6">Không tải được kết quả.</td>
+            </tr>
+          `;
+            return;
+          }
 
-        results.forEach((item, index) => {
-          container.innerHTML += `
+          if (results.length === 0) {
+            container.innerHTML = `
+            <tr>
+              <td colspan="6">Bạn chưa có kết quả thi.</td>
+            </tr>
+          `;
+            return;
+          }
+
+          results.forEach((item, index) => {
+            container.innerHTML += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${item.student_name}</td>
+              <td>${item.title}</td>
+              <td>${item.correct_answers}/${item.total_questions}</td>
+              <td>${Number(item.score).toFixed(2)}</td>
+              <td>${new Date(item.created_at).toLocaleString("vi-VN")}</td>
+            </tr>
+          `;
+          });
+        } catch (error) {
+          console.error(error);
+
+          document.getElementById("result-list").innerHTML = `
           <tr>
-            <td>${index + 1}</td>
-            <td>${item.student_name}</td>
-            <td>${item.title}</td>
-            <td>
-              ${item.correct_answers}/${item.total_questions}
-            </td>
-            <td>${item.score}</td>
-            <td>
-              ${new Date(item.created_at).toLocaleString()}
-            </td>
+            <td colspan="6">Không thể kết nối đến máy chủ.</td>
           </tr>
         `;
-        });
+        }
+      }
+
+      function goHome() {
+        const currentUser = JSON.parse(localStorage.getItem("quiz_user"));
+
+        if (currentUser && currentUser.role === "student") {
+          window.location.href = "/student-dashboard.html";
+          return;
+        }
+
+        if (currentUser && currentUser.role === "admin") {
+          window.location.href = "/admin-dashboard.html";
+          return;
+        }
+
+        window.location.href = "/login.html";
       }
 
       loadResults();

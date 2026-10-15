@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý đề thi</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body class="admin-page">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-logo">QUIZ ADMIN</div>
+
+        <nav>
+          <a href="/admin-dashboard.html">Tổng quan</a>
+          <a href="/admin-quizzes.html" class="active">Quản lý đề thi</a>
+          <a href="/admin-questions.html">Quản lý câu hỏi</a>
+          <a href="/admin-students.html">Quản lý sinh viên</a>
+          <a href="/admin-results.html">Kết quả thi</a>
+        </nav>
+
+        <button class="logout-button" onclick="logout()">Đăng xuất</button>
+      </aside>
+
+      <main class="admin-main">
+        <div class="admin-topbar">
+          <h1>Quản lý đề thi</h1>
+          <p>Thêm, sửa và xóa đề thi trong hệ thống.</p>
+        </div>
+
+        <section class="admin-card">
+          <h2>Thêm đề thi mới</h2>
+
+          <div class="admin-form">
+            <input id="quizTitle" placeholder="Tên đề thi" />
+            <textarea
+              id="quizDescription"
+              placeholder="Mô tả đề thi"
+            ></textarea>
+            <button onclick="addQuiz()">Thêm đề thi</button>
+          </div>
+        </section>
+
+        <br />
+
+        <section class="admin-card">
+          <h2>Danh sách đề thi</h2>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Tên đề thi</th>
+                  <th>Mô tả</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+
+              <tbody id="quizTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user || user.role !== "admin") {
+        window.location.href = "/login.html";
+      }
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+        window.location.href = "/login.html";
+      }
+
+      async function loadQuizzes() {
+        const response = await fetch("/api/admin/quizzes");
+        const quizzes = await response.json();
+
+        const table = document.getElementById("quizTable");
+        table.innerHTML = "";
+
+        quizzes.forEach((quiz) => {
+          table.innerHTML += `
+          <tr>
+            <td>${quiz.id}</td>
+            <td>${quiz.title}</td>
+            <td>${quiz.description || ""}</td>
+            <td>
+              <button onclick="editQuiz(${quiz.id}, '${escapeText(quiz.title)}', '${escapeText(quiz.description || "")}')">
+                Sửa
+              </button>
+
+              <button class="danger-button" onclick="deleteQuiz(${quiz.id})">
+                Xóa
+              </button>
+            </td>
+          </tr>
+        `;
+        });
+      }
+
+      async function addQuiz() {
+        const title = document.getElementById("quizTitle").value.trim();
+        const description = document
+          .getElementById("quizDescription")
+          .value.trim();
+
+        if (!title) {
+          alert("Vui lòng nhập tên đề thi.");
+          return;
+        }
+
+        const response = await fetch("/api/admin/quizzes", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ title, description }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || "Không thể thêm đề thi.");
+          return;
+        }
+
+        document.getElementById("quizTitle").value = "";
+        document.getElementById("quizDescription").value = "";
+
+        loadQuizzes();
+      }
+
+      async function editQuiz(id, oldTitle, oldDescription) {
+        const title = prompt("Tên đề thi:", oldTitle);
+
+        if (title === null) {
+          return;
+        }
+
+        const description = prompt("Mô tả:", oldDescription);
+
+        if (description === null) {
+          return;
+        }
+
+        const response = await fetch(`/api/admin/quizzes/${id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ title, description }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || "Không thể cập nhật.");
+          return;
+        }
+
+        loadQuizzes();
+      }
+
+      async function deleteQuiz(id) {
+        const ok = confirm("Bạn có chắc muốn xóa đề thi này?");
+
+        if (!ok) {
+          return;
+        }
+
+        const response = await fetch(`/api/admin/quizzes/${id}`, {
+          method: "DELETE",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || "Không thể xóa đề thi.");
+          return;
+        }
+
+        loadQuizzes();
+      }
+
+      function escapeText(text) {
+        return String(text)
+          .replace(/\\/g, "\\\\")
+          .replace(/'/g, "\\'")
+          .replace(/\n/g, " ");
+      }
+
+      loadQuizzes();
+    </script>
+  </body>
+</html>

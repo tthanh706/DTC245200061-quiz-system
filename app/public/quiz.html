@@ -16,7 +16,6 @@
       <div class="card">
         <div class="form-group">
           <label>Họ và tên</label>
-
           <input id="studentName" placeholder="Nhập họ và tên" />
         </div>
 
@@ -28,19 +27,45 @@
 
         <br />
 
-        <a href="/" class="secondary-button"> Quay lại trang chủ </a>
+        <a href="#" class="secondary-button" onclick="goHome(event)">
+          Quay lại trang chủ
+        </a>
       </div>
     </main>
 
     <script>
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user) {
+        window.location.href = "/login.html";
+      }
+
       const params = new URLSearchParams(window.location.search);
+
       const quizId = params.get("id");
 
       let questions = [];
 
+      if (!quizId) {
+        document.getElementById("questions").innerHTML =
+          "<p>Không xác định được bài thi.</p>";
+      }
+
+      if (user && user.full_name) {
+        document.getElementById("studentName").value = user.full_name;
+      }
+
       async function loadQuiz() {
+        if (!quizId) {
+          return;
+        }
+
         try {
           const response = await fetch(`/api/quizzes/${quizId}/questions`);
+
+          if (!response.ok) {
+            throw new Error("Không tải được câu hỏi.");
+          }
 
           questions = await response.json();
 
@@ -48,35 +73,62 @@
 
           container.innerHTML = "";
 
+          if (!Array.isArray(questions) || questions.length === 0) {
+            container.innerHTML = "<p>Bài thi chưa có câu hỏi.</p>";
+
+            return;
+          }
+
           questions.forEach((question, index) => {
             const div = document.createElement("div");
+
             div.className = "question";
 
+            const inputType = question.multiple ? "checkbox" : "radio";
+
             let html = `
-            <h3>
-              Câu ${index + 1}: ${question.question_text}
-            </h3>
-          `;
+              <h3>
+                Câu ${index + 1}:
+                ${question.question_text}
+              </h3>
+            `;
+
+            if (question.multiple) {
+              html += `
+                <p class="multiple-note">
+                  Câu này có nhiều đáp án đúng.
+                  Hãy chọn tất cả đáp án đúng.
+                </p>
+              `;
+            }
 
             question.answers.forEach((answer) => {
               html += `
-              <label class="answer">
-                <input
-                  type="radio"
-                  name="question_${question.id}"
-                  value="${answer.id}"
-                >
-                ${answer.answer_text}
-              </label>
-            `;
+                  <label class="answer">
+
+                    <input
+                      type="${inputType}"
+                      name="question_${question.id}"
+                      value="${answer.id}"
+                    />
+
+                    <span>
+                      ${answer.answer_text}
+                    </span>
+
+                  </label>
+                `;
             });
 
             div.innerHTML = html;
+
             container.appendChild(div);
           });
         } catch (error) {
+          console.error(error);
+
           document.getElementById("questions").innerHTML =
-            "Không tải được câu hỏi.";
+            "<p>Không tải được câu hỏi.</p>";
         }
       }
 
@@ -88,58 +140,130 @@
           return;
         }
 
-        const answers = {};
-
-        questions.forEach((question) => {
-          const selected = document.querySelector(
-            `input[name="question_${question.id}"]:checked`,
-          );
-
-          if (selected) {
-            answers[question.id] = selected.value;
-          }
-        });
-
-        const response = await fetch("/api/submit", {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            studentName,
-            quizId,
-            answers,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          alert(result.error || "Có lỗi xảy ra");
+        if (questions.length === 0) {
+          alert("Bài thi chưa có câu hỏi.");
           return;
         }
 
-        document.getElementById("result").innerHTML = `
-        <div class="result-box">
-          <h2>KẾT QUẢ</h2>
+        const answers = {};
 
-          <p>
-            Sinh viên:
-            <strong>${result.studentName}</strong>
-          </p>
+        questions.forEach((question) => {
+          const selected = Array.from(
+            document.querySelectorAll(
+              `input[name="question_${question.id}"]:checked`,
+            ),
+          );
 
-          <p>
-            Số câu đúng:
-            ${result.correct}/${result.total}
-          </p>
+          if (selected.length > 0) {
+            answers[question.id] = selected.map((input) => input.value);
+          }
+        });
 
-          <h2>
-            Điểm: ${result.score}/10
-          </h2>
-        </div>
-      `;
+        const answeredCount = Object.keys(answers).length;
+
+        if (answeredCount < questions.length) {
+          const confirmSubmit = confirm(
+            `Bạn mới trả lời ${answeredCount}/${questions.length} câu.\nBạn có chắc muốn nộp bài?`,
+          );
+
+          if (!confirmSubmit) {
+            return;
+          }
+        }
+
+        try {
+          const response = await fetch("/api/submit", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+
+            body: JSON.stringify({
+              studentName,
+              quizId,
+              answers,
+              userId: user ? user.id : null,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            alert(result.error || "Có lỗi xảy ra.");
+
+            return;
+          }
+
+          document.getElementById("result").innerHTML = `
+          <div class="result-box">
+
+            <h2>KẾT QUẢ</h2>
+
+            <p>
+              Sinh viên:
+              <strong>
+                ${result.studentName}
+              </strong>
+            </p>
+
+            <p>
+              Số câu đúng:
+              <strong>
+                ${result.correct}/${result.total}
+              </strong>
+            </p>
+
+            <h2>
+              Điểm:
+              ${result.score}/10
+            </h2>
+
+          </div>
+        `;
+
+          document
+            .querySelectorAll('input[type="radio"], input[type="checkbox"]')
+            .forEach((input) => {
+              input.disabled = true;
+            });
+
+          const submitButton = document.querySelector(".submit-button");
+
+          submitButton.disabled = true;
+
+          submitButton.textContent = "Đã nộp bài";
+
+          document.getElementById("result").scrollIntoView({
+            behavior: "smooth",
+          });
+        } catch (error) {
+          console.error(error);
+
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      function goHome(event) {
+        if (event) {
+          event.preventDefault();
+        }
+
+        const currentUser = JSON.parse(localStorage.getItem("quiz_user"));
+
+        if (currentUser && currentUser.role === "student") {
+          window.location.href = "/student-dashboard.html";
+
+          return;
+        }
+
+        if (currentUser && currentUser.role === "admin") {
+          window.location.href = "/admin-dashboard.html";
+
+          return;
+        }
+
+        window.location.href = "/login.html";
       }
 
       loadQuiz();

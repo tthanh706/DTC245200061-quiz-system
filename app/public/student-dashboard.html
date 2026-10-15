@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Sinh viên - Quiz System</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body class="student-page">
+    <header class="student-header">
+      <div class="student-header-inner">
+        <div>
+          <h1>HỆ THỐNG THI TRẮC NGHIỆM</h1>
+          <p id="student-welcome">Xin chào</p>
+        </div>
+
+        <button class="student-logout" onclick="logout()">Đăng xuất</button>
+      </div>
+    </header>
+
+    <main class="student-container">
+      <section class="student-stats">
+        <div class="student-stat-card">
+          <span>Bài thi hiện có</span>
+          <strong id="student-total-quizzes"> 0 </strong>
+        </div>
+
+        <div class="student-stat-card">
+          <span>Lượt thi</span>
+          <strong id="student-total-results"> 0 </strong>
+        </div>
+
+        <div class="student-stat-card">
+          <span>Điểm trung bình</span>
+          <strong id="student-average-score"> 0 </strong>
+        </div>
+      </section>
+
+      <section class="student-card">
+        <div class="student-section-title">
+          <div>
+            <h2>Danh sách bài thi</h2>
+            <p>Chọn bài thi để bắt đầu làm bài.</p>
+          </div>
+
+          <a href="/results.html" class="student-link-button"> Xem kết quả </a>
+        </div>
+
+        <div id="student-quiz-list" class="student-quiz-grid">
+          Đang tải dữ liệu...
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user || user.role !== "student") {
+        window.location.href = "/login.html";
+      }
+
+      document.getElementById("student-welcome").textContent =
+        "Xin chào, " + user.full_name;
+
+      // ===============================
+      // LOGOUT
+      // ===============================
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+
+        window.location.href = "/login.html";
+      }
+
+      // ===============================
+      // LOAD QUIZZES
+      // ===============================
+
+      async function loadStudentDashboard() {
+        try {
+          const quizResponse = await fetch("/api/quizzes");
+
+          const quizzes = await quizResponse.json();
+
+          document.getElementById("student-total-quizzes").textContent =
+            quizzes.length;
+
+          renderQuizzes(quizzes);
+
+          const resultsResponse = await fetch("/api/results");
+
+          const results = await resultsResponse.json();
+
+          const myResults = results.filter(
+            (item) => item.student_name === user.full_name,
+          );
+
+          document.getElementById("student-total-results").textContent =
+            myResults.length;
+
+          let average = 0;
+
+          if (myResults.length > 0) {
+            const total = myResults.reduce(
+              (sum, item) => sum + Number(item.score),
+              0,
+            );
+
+            average = total / myResults.length;
+          }
+
+          document.getElementById("student-average-score").textContent =
+            average.toFixed(2);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      // ===============================
+      // HIỂN THỊ BÀI THI
+      // ===============================
+
+      function renderQuizzes(quizzes) {
+        const container = document.getElementById("student-quiz-list");
+
+        container.innerHTML = "";
+
+        if (quizzes.length === 0) {
+          container.innerHTML = "<p>Chưa có bài thi.</p>";
+
+          return;
+        }
+
+        quizzes.forEach((quiz) => {
+          const div = document.createElement("div");
+
+          div.className = "student-quiz-card";
+
+          div.innerHTML = `
+
+                <div class="quiz-icon">
+                    ?
+                </div>
+
+                <h3>
+                    ${quiz.title}
+                </h3>
+
+                <p>
+                    ${quiz.description || ""}
+                </p>
+
+                <button
+                    onclick="startQuiz(${quiz.id})"
+                >
+                    Bắt đầu làm bài
+                </button>
+
+            `;
+
+          container.appendChild(div);
+        });
+      }
+
+      // ===============================
+      // BẮT ĐẦU LÀM BÀI
+      // ===============================
+
+      function startQuiz(id) {
+        window.location.href = "/quiz.html?id=" + id;
+      }
+
+      loadStudentDashboard();
+    </script>
+  </body>
+</html>

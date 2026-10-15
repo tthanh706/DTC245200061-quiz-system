@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Quản trị hệ thống</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body class="admin-page">
+    <div class="admin-layout">
+      <!-- SIDEBAR -->
+      <aside class="admin-sidebar">
+        <div class="admin-logo">QUIZ ADMIN</div>
+
+        <nav>
+          <a href="/admin-dashboard.html" class="active"> Tổng quan </a>
+
+          <a href="/admin-questions.html"> Quản lý đề thi </a>
+
+          <a href="/admin-questions.html">Quản lý câu hỏi</a>
+
+          <a href="/admin-students.html"> Quản lý sinh viên </a>
+
+          <a href="/admin-results.html"> Kết quả thi </a>
+        </nav>
+
+        <button class="logout-button" onclick="logout()">Đăng xuất</button>
+      </aside>
+
+      <!-- MAIN -->
+      <main class="admin-main">
+        <header class="admin-topbar">
+          <div>
+            <h1>Quản trị hệ thống</h1>
+
+            <p id="welcome-text">Xin chào</p>
+          </div>
+        </header>
+
+        <!-- THỐNG KÊ -->
+        <section class="admin-stats">
+          <div class="stat-card">
+            <span> Tổng đề thi </span>
+
+            <strong id="total-quizzes"> 0 </strong>
+          </div>
+
+          <div class="stat-card">
+            <span> Tổng câu hỏi </span>
+
+            <strong id="total-questions"> 0 </strong>
+          </div>
+
+          <div class="stat-card">
+            <span> Sinh viên </span>
+
+            <strong id="total-students"> 0 </strong>
+          </div>
+
+          <div class="stat-card">
+            <span> Lượt thi </span>
+
+            <strong id="total-results"> 0 </strong>
+          </div>
+        </section>
+
+        <!-- KẾT QUẢ GẦN ĐÂY -->
+        <section class="admin-card">
+          <div class="section-heading">
+            <h2>Kết quả thi gần đây</h2>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sinh viên</th>
+
+                  <th>Bài thi</th>
+
+                  <th>Điểm</th>
+
+                  <th>Số câu đúng</th>
+
+                  <th>Thời gian</th>
+                </tr>
+              </thead>
+
+              <tbody id="recent-results">
+                <tr>
+                  <td colspan="5">Đang tải dữ liệu...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      // ===============================
+      // KIỂM TRA ĐĂNG NHẬP
+      // ===============================
+
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user || user.role !== "admin") {
+        window.location.href = "/login.html";
+      }
+
+      document.getElementById("welcome-text").textContent =
+        "Xin chào, " + user.full_name;
+
+      // ===============================
+      // LOGOUT
+      // ===============================
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+
+        window.location.href = "/login.html";
+      }
+
+      // ===============================
+      // LOAD DASHBOARD
+      // ===============================
+
+      async function loadDashboard() {
+        try {
+          const [quizzesResponse, resultsResponse] = await Promise.all([
+            fetch("/api/quizzes"),
+
+            fetch("/api/results"),
+          ]);
+
+          const quizzes = await quizzesResponse.json();
+
+          const results = await resultsResponse.json();
+
+          document.getElementById("total-quizzes").textContent = quizzes.length;
+
+          document.getElementById("total-results").textContent = results.length;
+
+          loadRecentResults(results);
+
+          await loadSystemStats();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      // ===============================
+      // THỐNG KÊ BỔ SUNG
+      // ===============================
+
+      async function loadSystemStats() {
+        try {
+          const response = await fetch("/api/admin/stats");
+
+          if (!response.ok) {
+            return;
+          }
+
+          const data = await response.json();
+
+          document.getElementById("total-questions").textContent =
+            data.totalQuestions;
+
+          document.getElementById("total-students").textContent =
+            data.totalStudents;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      // ===============================
+      // KẾT QUẢ GẦN ĐÂY
+      // ===============================
+
+      function loadRecentResults(results) {
+        const container = document.getElementById("recent-results");
+
+        container.innerHTML = "";
+
+        const recent = results.slice(0, 10);
+
+        if (recent.length === 0) {
+          container.innerHTML = `
+
+            <tr>
+
+                <td colspan="5">
+                    Chưa có kết quả thi.
+                </td>
+
+            </tr>
+
+        `;
+
+          return;
+        }
+
+        recent.forEach((result) => {
+          container.innerHTML += `
+
+                <tr>
+
+                    <td>
+                        ${result.student_name}
+                    </td>
+
+                    <td>
+                        ${result.title}
+                    </td>
+
+                    <td>
+                        ${result.score}
+                    </td>
+
+                    <td>
+                        ${result.correct_answers}
+                        /
+                        ${result.total_questions}
+                    </td>
+
+                    <td>
+                        ${new Date(result.created_at).toLocaleString("vi-VN")}
+                    </td>
+
+                </tr>
+
+            `;
+        });
+      }
+
+      loadDashboard();
+    </script>
+  </body>
+</html>

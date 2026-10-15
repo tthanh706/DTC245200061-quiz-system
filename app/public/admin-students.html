@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý sinh viên</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body class="admin-page">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-logo">QUIZ ADMIN</div>
+
+        <nav>
+          <a href="/admin-dashboard.html">Tổng quan</a>
+          <a href="/admin-quizzes.html">Quản lý đề thi</a>
+          <a href="/admin-questions.html">Quản lý câu hỏi</a>
+          <a href="/admin-students.html" class="active">Quản lý sinh viên</a>
+          <a href="/admin-results.html">Kết quả thi</a>
+        </nav>
+
+        <button class="logout-button" onclick="logout()">Đăng xuất</button>
+      </aside>
+
+      <main class="admin-main">
+        <div class="admin-topbar">
+          <h1>Quản lý sinh viên</h1>
+          <p>Thêm, sửa và xóa tài khoản sinh viên.</p>
+        </div>
+
+        <section class="admin-card">
+          <h2>Thêm sinh viên mới</h2>
+
+          <div class="admin-form">
+            <input id="fullName" placeholder="Họ và tên sinh viên" />
+
+            <input id="username" placeholder="Tên đăng nhập" />
+
+            <input id="password" type="password" placeholder="Mật khẩu" />
+
+            <button onclick="addStudent()">Thêm sinh viên</button>
+          </div>
+        </section>
+
+        <br />
+
+        <section class="admin-card">
+          <h2>Danh sách sinh viên</h2>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Họ tên</th>
+                  <th>Tên đăng nhập</th>
+                  <th>Ngày tạo</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+
+              <tbody id="studentTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user || user.role !== "admin") {
+        window.location.href = "/login.html";
+      }
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+        window.location.href = "/login.html";
+      }
+
+      async function loadStudents() {
+        try {
+          const response = await fetch("/api/admin/students");
+
+          const students = await response.json();
+
+          const table = document.getElementById("studentTable");
+
+          table.innerHTML = "";
+
+          if (!response.ok) {
+            table.innerHTML = `
+            <tr>
+              <td colspan="5">
+                Không tải được danh sách sinh viên.
+              </td>
+            </tr>
+          `;
+            return;
+          }
+
+          if (students.length === 0) {
+            table.innerHTML = `
+            <tr>
+              <td colspan="5">
+                Chưa có sinh viên.
+              </td>
+            </tr>
+          `;
+            return;
+          }
+
+          students.forEach((student) => {
+            const date = student.created_at
+              ? new Date(student.created_at).toLocaleString("vi-VN")
+              : "";
+
+            table.innerHTML += `
+            <tr>
+              <td>${student.id}</td>
+
+              <td>${student.full_name}</td>
+
+              <td>${student.username}</td>
+
+              <td>${date}</td>
+
+              <td>
+                <button
+                  onclick="editStudent(
+                    ${student.id},
+                    '${escapeText(student.full_name)}',
+                    '${escapeText(student.username)}'
+                  )"
+                >
+                  Sửa
+                </button>
+
+                <button
+                  class="danger-button"
+                  onclick="deleteStudent(${student.id})"
+                >
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          `;
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      async function addStudent() {
+        const fullName = document.getElementById("fullName").value.trim();
+
+        const username = document.getElementById("username").value.trim();
+
+        const password = document.getElementById("password").value;
+
+        if (!fullName || !username || !password) {
+          alert("Vui lòng nhập đầy đủ thông tin.");
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/admin/students", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+
+            body: JSON.stringify({
+              fullName,
+              username,
+              password,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Không thể thêm sinh viên.");
+            return;
+          }
+
+          alert("Thêm sinh viên thành công.");
+
+          document.getElementById("fullName").value = "";
+          document.getElementById("username").value = "";
+          document.getElementById("password").value = "";
+
+          loadStudents();
+        } catch (error) {
+          console.error(error);
+
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      async function editStudent(id, oldFullName, oldUsername) {
+        const fullName = prompt("Họ và tên:", oldFullName);
+
+        if (fullName === null) {
+          return;
+        }
+
+        const username = prompt("Tên đăng nhập:", oldUsername);
+
+        if (username === null) {
+          return;
+        }
+
+        const password = prompt("Mật khẩu mới (để trống nếu không đổi):", "");
+
+        if (password === null) {
+          return;
+        }
+
+        if (!fullName.trim() || !username.trim()) {
+          alert("Họ tên và tên đăng nhập không được để trống.");
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/admin/students/${id}`, {
+            method: "PUT",
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+
+            body: JSON.stringify({
+              fullName: fullName.trim(),
+              username: username.trim(),
+              password,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Không thể cập nhật sinh viên.");
+            return;
+          }
+
+          alert("Cập nhật sinh viên thành công.");
+
+          loadStudents();
+        } catch (error) {
+          console.error(error);
+
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      async function deleteStudent(id) {
+        const ok = confirm("Bạn có chắc muốn xóa sinh viên này?");
+
+        if (!ok) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/admin/students/${id}`, {
+            method: "DELETE",
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Không thể xóa sinh viên.");
+            return;
+          }
+
+          alert("Xóa sinh viên thành công.");
+
+          loadStudents();
+        } catch (error) {
+          console.error(error);
+
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      function escapeText(text) {
+        return String(text)
+          .replace(/\\/g, "\\\\")
+          .replace(/'/g, "\\'")
+          .replace(/\n/g, " ");
+      }
+
+      loadStudents();
+    </script>
+  </body>
+</html>

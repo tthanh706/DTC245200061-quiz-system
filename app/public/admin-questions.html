@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý câu hỏi</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body class="admin-page">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-logo">QUIZ ADMIN</div>
+
+        <nav>
+          <a href="/admin-dashboard.html">Tổng quan</a>
+          <a href="/admin-quizzes.html">Quản lý đề thi</a>
+          <a href="/admin-questions.html" class="active">Quản lý câu hỏi</a>
+          <a href="/admin-students.html">Quản lý sinh viên</a>
+          <a href="/admin-results.html">Kết quả thi</a>
+        </nav>
+
+        <button class="logout-button" onclick="logout()">Đăng xuất</button>
+      </aside>
+
+      <main class="admin-main">
+        <div class="admin-topbar">
+          <h1>Quản lý câu hỏi</h1>
+          <p>Thêm, sửa, xóa câu hỏi và đáp án.</p>
+        </div>
+
+        <section class="admin-card">
+          <h2>Thêm câu hỏi mới</h2>
+
+          <div class="admin-form">
+            <select id="quizId"></select>
+
+            <textarea
+              id="questionText"
+              placeholder="Nhập nội dung câu hỏi"
+            ></textarea>
+
+            <div class="answer-inputs">
+              <input id="answer1" placeholder="Đáp án 1" />
+              <input id="answer2" placeholder="Đáp án 2" />
+              <input id="answer3" placeholder="Đáp án 3" />
+              <input id="answer4" placeholder="Đáp án 4" />
+            </div>
+
+            <div class="correct-answer-box">
+              <strong>Chọn đáp án đúng:</strong>
+
+              <label>
+                <input type="checkbox" class="correct-checkbox" value="0" />
+                Đáp án 1
+              </label>
+
+              <label>
+                <input type="checkbox" class="correct-checkbox" value="1" />
+                Đáp án 2
+              </label>
+
+              <label>
+                <input type="checkbox" class="correct-checkbox" value="2" />
+                Đáp án 3
+              </label>
+
+              <label>
+                <input type="checkbox" class="correct-checkbox" value="3" />
+                Đáp án 4
+              </label>
+            </div>
+
+            <button onclick="addQuestion()">Thêm câu hỏi</button>
+          </div>
+        </section>
+
+        <br />
+
+        <section class="admin-card">
+          <h2>Danh sách câu hỏi</h2>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Đề thi</th>
+                  <th>Câu hỏi</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+
+              <tbody id="questionTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user || user.role !== "admin") {
+        window.location.href = "/login.html";
+      }
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+        window.location.href = "/login.html";
+      }
+
+      async function loadQuizzes() {
+        try {
+          const response = await fetch("/api/admin/quizzes");
+          const quizzes = await response.json();
+
+          const select = document.getElementById("quizId");
+          select.innerHTML = "";
+
+          if (!response.ok) {
+            select.innerHTML = `
+            <option value="">
+              Không tải được danh sách đề thi
+            </option>
+          `;
+            return;
+          }
+
+          if (quizzes.length === 0) {
+            select.innerHTML = `
+            <option value="">
+              Chưa có đề thi
+            </option>
+          `;
+            return;
+          }
+
+          quizzes.forEach((quiz) => {
+            select.innerHTML += `
+            <option value="${quiz.id}">
+              ${quiz.title}
+            </option>
+          `;
+          });
+
+          await loadQuestions();
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      async function loadQuestions() {
+        try {
+          const quizId = document.getElementById("quizId").value;
+
+          const response = await fetch("/api/admin/questions");
+          const questions = await response.json();
+
+          const table = document.getElementById("questionTable");
+          table.innerHTML = "";
+
+          if (!response.ok) {
+            table.innerHTML = `
+            <tr>
+              <td colspan="4">
+                Không tải được danh sách câu hỏi.
+              </td>
+            </tr>
+          `;
+            return;
+          }
+
+          if (!quizId) {
+            table.innerHTML = `
+            <tr>
+              <td colspan="4">
+                Vui lòng chọn đề thi.
+              </td>
+            </tr>
+          `;
+            return;
+          }
+
+          const filteredQuestions = questions.filter(
+            (item) => String(item.quiz_id) === String(quizId),
+          );
+
+          if (filteredQuestions.length === 0) {
+            table.innerHTML = `
+            <tr>
+              <td colspan="4">
+                Bài thi này chưa có câu hỏi.
+              </td>
+            </tr>
+          `;
+            return;
+          }
+
+          filteredQuestions.forEach((item) => {
+            table.innerHTML += `
+            <tr>
+              <td>${item.id}</td>
+
+              <td>${item.quiz_title}</td>
+
+              <td>${item.question_text}</td>
+
+              <td>
+                <button onclick="editQuestion(${item.id})">
+                  Sửa
+                </button>
+
+                <button
+                  class="danger-button"
+                  onclick="deleteQuestion(${item.id})"
+                >
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          `;
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      async function addQuestion() {
+        const quizId = document.getElementById("quizId").value;
+
+        const questionText = document
+          .getElementById("questionText")
+          .value.trim();
+
+        const values = [
+          document.getElementById("answer1").value.trim(),
+          document.getElementById("answer2").value.trim(),
+          document.getElementById("answer3").value.trim(),
+          document.getElementById("answer4").value.trim(),
+        ];
+
+        const checked = Array.from(
+          document.querySelectorAll(".correct-checkbox:checked"),
+        ).map((item) => Number(item.value));
+
+        if (!quizId) {
+          alert("Vui lòng chọn đề thi.");
+          return;
+        }
+
+        if (!questionText || values.some((item) => !item)) {
+          alert("Vui lòng nhập đầy đủ câu hỏi và 4 đáp án.");
+          return;
+        }
+
+        if (checked.length === 0) {
+          alert("Phải chọn ít nhất 1 đáp án đúng.");
+          return;
+        }
+
+        const answers = values.map((text, index) => ({
+          text,
+          isCorrect: checked.includes(index),
+        }));
+
+        try {
+          const response = await fetch("/api/admin/questions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              quizId,
+              questionText,
+              answers,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Không thể thêm câu hỏi.");
+            return;
+          }
+
+          alert("Thêm câu hỏi thành công.");
+
+          clearForm();
+          loadQuestions();
+        } catch (error) {
+          console.error(error);
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      async function editQuestion(id) {
+        try {
+          const response = await fetch(`/api/admin/questions/${id}`);
+          const item = await response.json();
+
+          if (!response.ok) {
+            alert(item.error || "Không tải được câu hỏi.");
+            return;
+          }
+
+          const newQuestion = prompt("Nội dung câu hỏi:", item.question_text);
+
+          if (newQuestion === null) {
+            return;
+          }
+
+          if (!newQuestion.trim()) {
+            alert("Nội dung câu hỏi không được để trống.");
+            return;
+          }
+
+          const answers = [];
+
+          for (let i = 0; i < item.answers.length; i++) {
+            const newText = prompt(
+              `Đáp án ${i + 1}:`,
+              item.answers[i].answer_text,
+            );
+
+            if (newText === null) {
+              return;
+            }
+
+            if (!newText.trim()) {
+              alert("Đáp án không được để trống.");
+              return;
+            }
+
+            answers.push({
+              text: newText.trim(),
+              isCorrect: Boolean(item.answers[i].is_correct),
+            });
+          }
+
+          const oldCorrect = item.answers
+            .map((answer, index) => {
+              return answer.is_correct ? index + 1 : null;
+            })
+            .filter(Boolean)
+            .join(",");
+
+          const correctInput = prompt(
+            "Nhập số các đáp án đúng, cách nhau bằng dấu phẩy.\nVí dụ: 1,3",
+            oldCorrect,
+          );
+
+          if (correctInput === null) {
+            return;
+          }
+
+          const correctNumbers = [
+            ...new Set(
+              correctInput
+                .split(",")
+                .map((item) => Number(item.trim()))
+                .filter((item) => item >= 1 && item <= answers.length),
+            ),
+          ];
+
+          if (correctNumbers.length === 0) {
+            alert("Phải có ít nhất 1 đáp án đúng.");
+            return;
+          }
+
+          answers.forEach((answer, index) => {
+            answer.isCorrect = correctNumbers.includes(index + 1);
+          });
+
+          const updateResponse = await fetch(`/api/admin/questions/${id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              quizId: item.quiz_id,
+              questionText: newQuestion.trim(),
+              answers,
+            }),
+          });
+
+          const data = await updateResponse.json();
+
+          if (!updateResponse.ok) {
+            alert(data.error || "Không thể cập nhật câu hỏi.");
+            return;
+          }
+
+          alert("Cập nhật câu hỏi thành công.");
+
+          loadQuestions();
+        } catch (error) {
+          console.error(error);
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      async function deleteQuestion(id) {
+        const ok = confirm("Bạn có chắc muốn xóa câu hỏi này?");
+
+        if (!ok) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/admin/questions/${id}`, {
+            method: "DELETE",
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Không thể xóa câu hỏi.");
+            return;
+          }
+
+          alert("Xóa câu hỏi thành công.");
+
+          loadQuestions();
+        } catch (error) {
+          console.error(error);
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      function clearForm() {
+        document.getElementById("questionText").value = "";
+        document.getElementById("answer1").value = "";
+        document.getElementById("answer2").value = "";
+        document.getElementById("answer3").value = "";
+        document.getElementById("answer4").value = "";
+
+        document.querySelectorAll(".correct-checkbox").forEach((item) => {
+          item.checked = false;
+        });
+      }
+
+      document
+        .getElementById("quizId")
+        .addEventListener("change", loadQuestions);
+
+      loadQuizzes();
+    </script>
+  </body>
+</html>

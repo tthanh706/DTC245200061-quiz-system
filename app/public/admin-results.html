@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kết quả thi</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body class="admin-page">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-logo">QUIZ ADMIN</div>
+
+        <nav>
+          <a href="/admin-dashboard.html">Tổng quan</a>
+          <a href="/admin-quizzes.html">Quản lý đề thi</a>
+          <a href="/admin-questions.html">Quản lý câu hỏi</a>
+          <a href="/admin-students.html">Quản lý sinh viên</a>
+          <a href="/admin-results.html" class="active">Kết quả thi</a>
+        </nav>
+
+        <button class="logout-button" onclick="logout()">Đăng xuất</button>
+      </aside>
+
+      <main class="admin-main">
+        <div class="admin-topbar">
+          <h1>Kết quả thi</h1>
+          <p>Theo dõi kết quả và điểm thi của sinh viên.</p>
+        </div>
+
+        <div class="admin-stats">
+          <div class="stat-card">
+            <span>Tổng lượt thi</span>
+            <strong id="totalAttempts">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Điểm trung bình</span>
+            <strong id="averageScore">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Điểm cao nhất</span>
+            <strong id="highestScore">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Đạt từ 5 điểm</span>
+            <strong id="passedCount">0</strong>
+          </div>
+        </div>
+
+        <br />
+
+        <section class="admin-card">
+          <h2>Bộ lọc kết quả</h2>
+
+          <div class="results-filter">
+            <input
+              id="searchStudent"
+              placeholder="Tìm theo tên sinh viên hoặc tài khoản"
+            />
+
+            <select id="quizFilter">
+              <option value="">Tất cả đề thi</option>
+            </select>
+          </div>
+        </section>
+
+        <br />
+
+        <section class="admin-card">
+          <h2>Danh sách kết quả thi</h2>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Sinh viên</th>
+                  <th>Tài khoản</th>
+                  <th>Đề thi</th>
+                  <th>Kết quả</th>
+                  <th>Điểm</th>
+                  <th>Thời gian</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+
+              <tbody id="resultTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!user || user.role !== "admin") {
+        window.location.href = "/login.html";
+      }
+
+      let allResults = [];
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+        window.location.href = "/login.html";
+      }
+
+      async function loadStats() {
+        try {
+          const response = await fetch("/api/admin/results-stats");
+          const data = await response.json();
+
+          if (!response.ok) return;
+
+          document.getElementById("totalAttempts").textContent =
+            data.total_attempts;
+
+          document.getElementById("averageScore").textContent = Number(
+            data.average_score,
+          ).toFixed(2);
+
+          document.getElementById("highestScore").textContent = Number(
+            data.highest_score,
+          ).toFixed(2);
+
+          document.getElementById("passedCount").textContent = data.passed;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      async function loadQuizzes() {
+        try {
+          const response = await fetch("/api/admin/quizzes");
+          const quizzes = await response.json();
+
+          const select = document.getElementById("quizFilter");
+
+          quizzes.forEach((quiz) => {
+            select.innerHTML += `
+            <option value="${quiz.id}">
+              ${quiz.title}
+            </option>
+          `;
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      async function loadResults() {
+        try {
+          const response = await fetch("/api/admin/results");
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Không tải được kết quả thi.");
+            return;
+          }
+
+          allResults = data;
+
+          renderResults(allResults);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function renderResults(results) {
+        const table = document.getElementById("resultTable");
+
+        table.innerHTML = "";
+
+        if (results.length === 0) {
+          table.innerHTML = `
+          <tr>
+            <td colspan="8">
+              Chưa có kết quả thi.
+            </td>
+          </tr>
+        `;
+          return;
+        }
+
+        results.forEach((item) => {
+          const date = item.created_at
+            ? new Date(item.created_at).toLocaleString("vi-VN")
+            : "";
+
+          const score = Number(item.score).toFixed(2);
+
+          table.innerHTML += `
+          <tr>
+            <td>${item.id}</td>
+
+            <td>${item.student_name || ""}</td>
+
+            <td>${item.username || "-"}</td>
+
+            <td>${item.quiz_title}</td>
+
+            <td>
+              ${item.correct_answers}/${item.total_questions}
+            </td>
+
+            <td>
+              <strong>${score}</strong>
+            </td>
+
+            <td>${date}</td>
+
+            <td>
+              <button
+                class="danger-button"
+                onclick="deleteResult(${item.id})"
+              >
+                Xóa
+              </button>
+            </td>
+          </tr>
+        `;
+        });
+      }
+
+      function filterResults() {
+        const keyword = document
+          .getElementById("searchStudent")
+          .value.trim()
+          .toLowerCase();
+
+        const quizId = document.getElementById("quizFilter").value;
+
+        const filtered = allResults.filter((item) => {
+          const studentName = String(item.student_name || "").toLowerCase();
+
+          const username = String(item.username || "").toLowerCase();
+
+          const matchStudent =
+            studentName.includes(keyword) || username.includes(keyword);
+
+          const matchQuiz = !quizId || String(item.quiz_id) === String(quizId);
+
+          return matchStudent && matchQuiz;
+        });
+
+        renderResults(filtered);
+      }
+
+      async function deleteResult(id) {
+        const ok = confirm("Bạn có chắc muốn xóa kết quả thi này?");
+
+        if (!ok) return;
+
+        try {
+          const response = await fetch(`/api/admin/results/${id}`, {
+            method: "DELETE",
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Không thể xóa kết quả.");
+            return;
+          }
+
+          alert("Xóa kết quả thi thành công.");
+
+          await loadResults();
+          await loadStats();
+        } catch (error) {
+          console.error(error);
+          alert("Không thể kết nối đến máy chủ.");
+        }
+      }
+
+      document
+        .getElementById("searchStudent")
+        .addEventListener("input", filterResults);
+
+      document
+        .getElementById("quizFilter")
+        .addEventListener("change", filterResults);
+
+      loadStats();
+      loadQuizzes();
+      loadResults();
+    </script>
+  </body>
+</html>
