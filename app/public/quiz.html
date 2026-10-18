@@ -2,174 +2,653 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Làm bài thi</title>
+
+    <title>Làm bài thi - Quiz System</title>
+
     <link rel="stylesheet" href="style.css" />
   </head>
 
-  <body>
-    <header class="header">
-      <h1>LÀM BÀI THI</h1>
-    </header>
-
-    <main class="container">
-      <div class="card">
-        <div class="form-group">
-          <label>Họ và tên</label>
-          <input id="studentName" placeholder="Nhập họ và tên" />
+  <body class="exam-page">
+    <header class="exam-header">
+      <div class="exam-header-inner">
+        <div class="exam-brand">
+          🎓
+          <span> Hệ thống thi trắc nghiệm </span>
         </div>
 
-        <div id="questions">Đang tải câu hỏi...</div>
-
-        <button class="submit-button" onclick="submitQuiz()">Nộp bài</button>
-
-        <div id="result"></div>
-
-        <br />
-
-        <a href="#" class="secondary-button" onclick="goHome(event)">
-          Quay lại trang chủ
-        </a>
+        <div id="exam-title" class="exam-title">Đang tải đề thi...</div>
       </div>
+    </header>
+
+    <main class="exam-main">
+      <!-- ========================= -->
+      <!-- KHU VỰC LÀM BÀI -->
+      <!-- ========================= -->
+
+      <div id="exam-area" class="exam-layout">
+        <!-- ========================= -->
+        <!-- CÂU HỎI -->
+        <!-- ========================= -->
+
+        <section class="exam-question-card">
+          <div class="exam-question-header">
+            <div>
+              <span id="question-number" class="exam-question-number">
+                Câu hỏi 1 / 1
+              </span>
+
+              <span id="question-type" class="exam-question-type">
+                Trắc nghiệm
+              </span>
+            </div>
+          </div>
+
+          <h2 id="question-text" class="exam-question-text">
+            Đang tải câu hỏi...
+          </h2>
+
+          <div id="answer-list" class="exam-answer-list"></div>
+
+          <!-- ========================= -->
+          <!-- NÚT ĐIỀU HƯỚNG -->
+          <!-- ========================= -->
+
+          <div class="exam-navigation">
+            <button
+              id="previous-button"
+              class="exam-button-secondary"
+              onclick="previousQuestion()"
+            >
+              ← Câu trước
+            </button>
+
+            <div class="exam-navigation-right">
+              <button
+                id="next-button"
+                class="exam-button-primary"
+                onclick="nextQuestion()"
+              >
+                Câu tiếp theo →
+              </button>
+
+              <button
+                id="submit-button"
+                class="exam-submit-button"
+                onclick="submitQuiz(false)"
+              >
+                Nộp bài thi
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================= -->
+        <!-- SIDEBAR -->
+        <!-- ========================= -->
+
+        <aside class="exam-sidebar">
+          <!-- TIMER -->
+
+          <div class="exam-timer-card">
+            <span> THỜI GIAN CÒN LẠI </span>
+
+            <strong id="exam-timer"> 20:00 </strong>
+          </div>
+
+          <!-- MỤC LỤC CÂU HỎI -->
+
+          <div class="exam-index-card">
+            <div class="exam-index-title">
+              <h3>Mục lục câu hỏi</h3>
+
+              <span id="answered-count"> 0/0 đã trả lời </span>
+            </div>
+
+            <div id="question-index" class="exam-question-index"></div>
+
+            <div class="exam-index-legend">
+              <span>
+                <i class="legend-dot answered"></i>
+
+                Đã trả lời
+              </span>
+
+              <span>
+                <i class="legend-dot unanswered"></i>
+
+                Chưa trả lời
+              </span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ========================= -->
+      <!-- KẾT QUẢ -->
+      <!-- ========================= -->
+
+      <section
+        id="result-area"
+        class="exam-result-wrapper"
+        style="display: none"
+      ></section>
     </main>
 
     <script>
+      // =====================================================
+      // USER
+      // =====================================================
+
       const user = JSON.parse(localStorage.getItem("quiz_user"));
 
-      if (!user) {
+      if (!user || user.role !== "student") {
         window.location.href = "/login.html";
       }
+
+      // =====================================================
+      // QUIZ ID
+      // =====================================================
 
       const params = new URLSearchParams(window.location.search);
 
       const quizId = params.get("id");
 
+      if (!quizId) {
+        alert("Không xác định được đề thi.");
+
+        window.location.href = "/student-dashboard.html";
+      }
+
+      // =====================================================
+      // VARIABLES
+      // =====================================================
+
       let questions = [];
 
-      if (!quizId) {
-        document.getElementById("questions").innerHTML =
-          "<p>Không xác định được bài thi.</p>";
-      }
+      let currentQuestionIndex = 0;
 
-      if (user && user.full_name) {
-        document.getElementById("studentName").value = user.full_name;
-      }
+      let studentAnswers = {};
 
-      async function loadQuiz() {
-        if (!quizId) {
-          return;
-        }
+      let timerInterval = null;
 
+      let isSubmitting = false;
+
+      // Thời gian thi mặc định
+      const EXAM_DURATION_MINUTES = 20;
+
+      // Key lưu đáp án riêng theo user + đề
+      const answerStorageKey = `quiz_answers_${user.id}_${quizId}`;
+
+      // Key lưu thời gian kết thúc
+      const timerStorageKey = `quiz_end_${user.id}_${quizId}`;
+
+      // =====================================================
+      // LOAD EXAM
+      // =====================================================
+
+      async function loadExam() {
         try {
+          await loadQuizTitle();
+
           const response = await fetch(`/api/quizzes/${quizId}/questions`);
 
           if (!response.ok) {
             throw new Error("Không tải được câu hỏi.");
           }
 
-          questions = await response.json();
+          const data = await response.json();
 
-          const container = document.getElementById("questions");
+          questions = Array.isArray(data) ? data : [];
 
-          container.innerHTML = "";
-
-          if (!Array.isArray(questions) || questions.length === 0) {
-            container.innerHTML = "<p>Bài thi chưa có câu hỏi.</p>";
+          if (questions.length === 0) {
+            document.getElementById("question-text").textContent =
+              "Đề thi chưa có câu hỏi.";
 
             return;
           }
 
-          questions.forEach((question, index) => {
-            const div = document.createElement("div");
+          // Load đáp án cũ nếu F5
+          loadSavedAnswers();
 
-            div.className = "question";
+          // Tạo mục lục
+          buildQuestionIndex();
 
-            const inputType = question.multiple ? "checkbox" : "radio";
+          // Hiện câu đầu tiên
+          renderCurrentQuestion();
 
-            let html = `
-              <h3>
-                Câu ${index + 1}:
-                ${question.question_text}
-              </h3>
-            `;
-
-            if (question.multiple) {
-              html += `
-                <p class="multiple-note">
-                  Câu này có nhiều đáp án đúng.
-                  Hãy chọn tất cả đáp án đúng.
-                </p>
-              `;
-            }
-
-            question.answers.forEach((answer) => {
-              html += `
-                  <label class="answer">
-
-                    <input
-                      type="${inputType}"
-                      name="question_${question.id}"
-                      value="${answer.id}"
-                    />
-
-                    <span>
-                      ${answer.answer_text}
-                    </span>
-
-                  </label>
-                `;
-            });
-
-            div.innerHTML = html;
-
-            container.appendChild(div);
-          });
+          // Chạy timer
+          startTimer();
         } catch (error) {
           console.error(error);
 
-          document.getElementById("questions").innerHTML =
-            "<p>Không tải được câu hỏi.</p>";
+          document.getElementById("question-text").textContent =
+            "Không tải được bài thi.";
         }
       }
 
-      async function submitQuiz() {
-        const studentName = document.getElementById("studentName").value.trim();
+      // =====================================================
+      // LOAD QUIZ TITLE
+      // =====================================================
 
-        if (!studentName) {
-          alert("Vui lòng nhập họ và tên.");
-          return;
-        }
+      async function loadQuizTitle() {
+        try {
+          const response = await fetch("/api/quizzes");
 
-        if (questions.length === 0) {
-          alert("Bài thi chưa có câu hỏi.");
-          return;
-        }
+          const quizzes = await response.json();
 
-        const answers = {};
-
-        questions.forEach((question) => {
-          const selected = Array.from(
-            document.querySelectorAll(
-              `input[name="question_${question.id}"]:checked`,
-            ),
+          const quiz = quizzes.find(
+            (item) => Number(item.id) === Number(quizId),
           );
 
-          if (selected.length > 0) {
-            answers[question.id] = selected.map((input) => input.value);
+          if (quiz) {
+            document.getElementById("exam-title").textContent = quiz.title;
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      // =====================================================
+      // RENDER CURRENT QUESTION
+      // =====================================================
+
+      function renderCurrentQuestion() {
+        if (questions.length === 0) {
+          return;
+        }
+
+        const question = questions[currentQuestionIndex];
+
+        // Số câu
+        document.getElementById("question-number").textContent = `Câu hỏi ${
+          currentQuestionIndex + 1
+        } / ${questions.length}`;
+
+        // Loại câu
+        document.getElementById("question-type").textContent = question.multiple
+          ? "Trắc nghiệm | nhiều đáp án"
+          : "Trắc nghiệm | 1 đáp án";
+
+        // Nội dung câu hỏi
+        document.getElementById("question-text").textContent =
+          question.question_text;
+
+        const answerList = document.getElementById("answer-list");
+
+        answerList.innerHTML = "";
+
+        const savedAnswers = studentAnswers[String(question.id)] || [];
+
+        // =========================================
+        // RENDER ANSWERS
+        // =========================================
+
+        question.answers.forEach((answer, index) => {
+          const label = document.createElement("label");
+
+          label.className = "exam-answer-option";
+
+          const input = document.createElement("input");
+
+          input.type = question.multiple ? "checkbox" : "radio";
+
+          input.name = `question_${question.id}`;
+
+          input.value = answer.id;
+
+          // Nếu câu này đã chọn trước đó
+          if (savedAnswers.map(Number).includes(Number(answer.id))) {
+            input.checked = true;
+
+            label.classList.add("selected");
+          }
+
+          input.addEventListener("change", function () {
+            saveCurrentAnswer();
+
+            // Re-render để cập nhật selected
+            renderCurrentQuestion();
+          });
+
+          // A B C D
+          const letter = String.fromCharCode(65 + index);
+
+          const letterElement = document.createElement("span");
+
+          letterElement.className = "exam-answer-letter";
+
+          letterElement.textContent = letter;
+
+          const textElement = document.createElement("span");
+
+          textElement.className = "exam-answer-text";
+
+          textElement.textContent = answer.answer_text;
+
+          label.appendChild(input);
+
+          label.appendChild(letterElement);
+
+          label.appendChild(textElement);
+
+          answerList.appendChild(label);
+        });
+
+        // =========================================
+        // BUTTON STATE
+        // =========================================
+
+        document.getElementById("previous-button").disabled =
+          currentQuestionIndex === 0;
+
+        // Ở câu cuối thì ẩn nút câu tiếp
+        document.getElementById("next-button").style.display =
+          currentQuestionIndex === questions.length - 1
+            ? "none"
+            : "inline-flex";
+
+        updateQuestionIndex();
+
+        updateAnsweredCount();
+      }
+
+      // =====================================================
+      // SAVE CURRENT ANSWER
+      // =====================================================
+
+      function saveCurrentAnswer() {
+        if (questions.length === 0) {
+          return;
+        }
+
+        const question = questions[currentQuestionIndex];
+
+        const checkedInputs = document.querySelectorAll(
+          `input[name="question_${question.id}"]:checked`,
+        );
+
+        const selected = Array.from(checkedInputs).map((input) =>
+          Number(input.value),
+        );
+
+        studentAnswers[String(question.id)] = selected;
+
+        // Lưu localStorage
+        localStorage.setItem(answerStorageKey, JSON.stringify(studentAnswers));
+
+        updateQuestionIndex();
+
+        updateAnsweredCount();
+      }
+
+      // =====================================================
+      // LOAD SAVED ANSWERS
+      // =====================================================
+
+      function loadSavedAnswers() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(answerStorageKey));
+
+          if (saved && typeof saved === "object") {
+            studentAnswers = saved;
+          }
+        } catch (error) {
+          console.error(error);
+
+          studentAnswers = {};
+        }
+      }
+
+      // =====================================================
+      // NEXT QUESTION
+      // =====================================================
+
+      function nextQuestion() {
+        saveCurrentAnswer();
+
+        if (currentQuestionIndex < questions.length - 1) {
+          currentQuestionIndex++;
+
+          renderCurrentQuestion();
+
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+        }
+      }
+
+      // =====================================================
+      // PREVIOUS QUESTION
+      // =====================================================
+
+      function previousQuestion() {
+        saveCurrentAnswer();
+
+        if (currentQuestionIndex > 0) {
+          currentQuestionIndex--;
+
+          renderCurrentQuestion();
+
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+        }
+      }
+
+      // =====================================================
+      // GO DIRECT QUESTION
+      // =====================================================
+
+      function goToQuestion(index) {
+        saveCurrentAnswer();
+
+        currentQuestionIndex = index;
+
+        renderCurrentQuestion();
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+
+      // =====================================================
+      // BUILD QUESTION INDEX
+      // =====================================================
+
+      function buildQuestionIndex() {
+        const container = document.getElementById("question-index");
+
+        container.innerHTML = "";
+
+        questions.forEach((question, index) => {
+          const button = document.createElement("button");
+
+          button.type = "button";
+
+          button.textContent = index + 1;
+
+          button.onclick = () => goToQuestion(index);
+
+          button.dataset.index = index;
+
+          container.appendChild(button);
+        });
+
+        updateQuestionIndex();
+      }
+
+      // =====================================================
+      // UPDATE QUESTION INDEX COLOR
+      // =====================================================
+
+      function updateQuestionIndex() {
+        const buttons = document.querySelectorAll("#question-index button");
+
+        buttons.forEach((button, index) => {
+          button.className = "";
+
+          const question = questions[index];
+
+          const answers = studentAnswers[String(question.id)] || [];
+
+          // Đã trả lời
+          if (answers.length > 0) {
+            button.classList.add("answered");
+          }
+
+          // Câu đang xem
+          if (index === currentQuestionIndex) {
+            button.classList.add("current");
+          }
+        });
+      }
+
+      // =====================================================
+      // UPDATE ANSWERED COUNT
+      // =====================================================
+
+      function updateAnsweredCount() {
+        let answered = 0;
+
+        questions.forEach((question) => {
+          const answers = studentAnswers[String(question.id)] || [];
+
+          if (answers.length > 0) {
+            answered++;
           }
         });
 
-        const answeredCount = Object.keys(answers).length;
+        document.getElementById("answered-count").textContent =
+          `${answered}/${questions.length} đã trả lời`;
+      }
 
-        if (answeredCount < questions.length) {
-          const confirmSubmit = confirm(
-            `Bạn mới trả lời ${answeredCount}/${questions.length} câu.\nBạn có chắc muốn nộp bài?`,
+      // =====================================================
+      // TIMER
+      // =====================================================
+
+      function startTimer() {
+        let endTime = Number(localStorage.getItem(timerStorageKey));
+
+        // Nếu chưa có thời gian kết thúc
+        if (!endTime) {
+          endTime = Date.now() + EXAM_DURATION_MINUTES * 60 * 1000;
+
+          localStorage.setItem(timerStorageKey, endTime);
+        }
+
+        updateTimer();
+
+        timerInterval = setInterval(updateTimer, 1000);
+      }
+
+      // =====================================================
+      // UPDATE TIMER
+      // =====================================================
+
+      function updateTimer() {
+        const endTime = Number(localStorage.getItem(timerStorageKey));
+
+        if (!endTime) {
+          return;
+        }
+
+        const remaining = endTime - Date.now();
+
+        // Hết giờ
+        if (remaining <= 0) {
+          document.getElementById("exam-timer").textContent = "00:00";
+
+          clearInterval(timerInterval);
+
+          // Auto-submit kể cả chưa làm đủ
+          submitQuiz(true);
+
+          return;
+        }
+
+        const totalSeconds = Math.floor(remaining / 1000);
+
+        const minutes = Math.floor(totalSeconds / 60);
+
+        const seconds = totalSeconds % 60;
+
+        document.getElementById("exam-timer").textContent = `${String(
+          minutes,
+        ).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      // =====================================================
+      // SUBMIT QUIZ
+      // =====================================================
+
+      async function submitQuiz(autoSubmit = false) {
+        if (isSubmitting) {
+          return;
+        }
+
+        // Lưu câu đang làm
+        saveCurrentAnswer();
+
+        // =========================================
+        // KIỂM TRA CÂU CHƯA LÀM
+        // =========================================
+
+        let unansweredQuestions = [];
+
+        questions.forEach((question, index) => {
+          const answers = studentAnswers[String(question.id)] || [];
+
+          if (answers.length === 0) {
+            unansweredQuestions.push(index + 1);
+          }
+        });
+
+        // Nếu bấm nộp thủ công
+        // nhưng chưa làm hết
+        if (!autoSubmit && unansweredQuestions.length > 0) {
+          alert(
+            "Bạn chưa trả lời hết các câu hỏi.\n\n" +
+              "Các câu chưa làm: " +
+              unansweredQuestions.join(", "),
           );
 
-          if (!confirmSubmit) {
+          // Nhảy luôn tới câu chưa làm đầu
+          currentQuestionIndex = unansweredQuestions[0] - 1;
+
+          renderCurrentQuestion();
+
+          return;
+        }
+
+        // =========================================
+        // XÁC NHẬN NỘP
+        // =========================================
+
+        if (!autoSubmit) {
+          const confirmed = confirm(
+            "Bạn đã trả lời đầy đủ các câu hỏi.\n\n" +
+              "Bạn có chắc chắn muốn nộp bài thi?",
+          );
+
+          if (!confirmed) {
             return;
           }
         }
+
+        isSubmitting = true;
+
+        const submitButton = document.getElementById("submit-button");
+
+        submitButton.disabled = true;
+
+        submitButton.textContent = autoSubmit
+          ? "Đang tự động nộp..."
+          : "Đang nộp bài...";
 
         try {
           const response = await fetch("/api/submit", {
@@ -180,93 +659,173 @@
             },
 
             body: JSON.stringify({
-              studentName,
-              quizId,
-              answers,
-              userId: user ? user.id : null,
+              studentName: user.full_name,
+
+              userId: user.id,
+
+              quizId: Number(quizId),
+
+              answers: studentAnswers,
             }),
           });
 
           const result = await response.json();
 
           if (!response.ok) {
-            alert(result.error || "Có lỗi xảy ra.");
-
-            return;
+            throw new Error(result.error || "Không thể nộp bài.");
           }
 
-          document.getElementById("result").innerHTML = `
-          <div class="result-box">
+          // =========================================
+          // NỘP THÀNH CÔNG
+          // =========================================
 
-            <h2>KẾT QUẢ</h2>
+          clearInterval(timerInterval);
 
-            <p>
-              Sinh viên:
-              <strong>
-                ${result.studentName}
-              </strong>
-            </p>
+          // Xóa timer
+          localStorage.removeItem(timerStorageKey);
 
-            <p>
-              Số câu đúng:
-              <strong>
-                ${result.correct}/${result.total}
-              </strong>
-            </p>
+          // Xóa đáp án tạm
+          localStorage.removeItem(answerStorageKey);
 
-            <h2>
-              Điểm:
-              ${result.score}/10
-            </h2>
-
-          </div>
-        `;
-
-          document
-            .querySelectorAll('input[type="radio"], input[type="checkbox"]')
-            .forEach((input) => {
-              input.disabled = true;
-            });
-
-          const submitButton = document.querySelector(".submit-button");
-
-          submitButton.disabled = true;
-
-          submitButton.textContent = "Đã nộp bài";
-
-          document.getElementById("result").scrollIntoView({
-            behavior: "smooth",
-          });
+          showResult(result);
         } catch (error) {
           console.error(error);
 
-          alert("Không thể kết nối đến máy chủ.");
+          alert(error.message || "Không thể nộp bài.");
+
+          isSubmitting = false;
+
+          submitButton.disabled = false;
+
+          submitButton.textContent = "Nộp bài thi";
         }
       }
 
-      function goHome(event) {
-        if (event) {
-          event.preventDefault();
-        }
+      // =====================================================
+      // SHOW RESULT
+      // =====================================================
 
-        const currentUser = JSON.parse(localStorage.getItem("quiz_user"));
+      function showResult(result) {
+        // Ẩn toàn bộ phần làm bài
+        document.getElementById("exam-area").style.display = "none";
 
-        if (currentUser && currentUser.role === "student") {
-          window.location.href = "/student-dashboard.html";
+        // Header
+        document.getElementById("exam-title").textContent = "Kết quả bài thi";
 
-          return;
-        }
+        const resultArea = document.getElementById("result-area");
 
-        if (currentUser && currentUser.role === "admin") {
-          window.location.href = "/admin-dashboard.html";
+        resultArea.style.display = "flex";
 
-          return;
-        }
+        const score = Number(result.score || 0).toFixed(2);
 
-        window.location.href = "/login.html";
+        resultArea.innerHTML = `
+
+        <div class="final-result-card">
+
+          <div class="final-result-icon">
+            ✓
+          </div>
+
+          <p class="final-result-label">
+            KẾT QUẢ BÀI THI
+          </p>
+
+          <div class="final-result-score">
+
+            ${score}
+
+            <span>
+              / 10
+            </span>
+
+          </div>
+
+          <div class="final-result-info">
+
+            <div>
+
+              <span>
+                Sinh viên
+              </span>
+
+              <strong>
+                ${escapeHtml(result.studentName || user.full_name)}
+              </strong>
+
+            </div>
+
+            <div>
+
+              <span>
+                Số câu đúng
+              </span>
+
+              <strong>
+                ${result.correct}
+                /
+                ${result.total}
+              </strong>
+
+            </div>
+
+          </div>
+
+          <div class="final-result-actions">
+
+            <button
+              class="final-home-button"
+              onclick="backToDashboard()"
+            >
+              Quay lại trang chủ
+            </button>
+
+            <button
+              class="final-history-button"
+              onclick="viewHistory()"
+            >
+              Xem lịch sử thi
+            </button>
+
+          </div>
+
+        </div>
+      `;
       }
 
-      loadQuiz();
+      // =====================================================
+      // BACK HOME
+      // =====================================================
+
+      function backToDashboard() {
+        window.location.href = "/student-dashboard.html";
+      }
+
+      // =====================================================
+      // HISTORY
+      // =====================================================
+
+      function viewHistory() {
+        window.location.href = "/results.html";
+      }
+
+      // =====================================================
+      // ESCAPE HTML
+      // =====================================================
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // =====================================================
+      // START
+      // =====================================================
+
+      loadExam();
     </script>
   </body>
 </html>

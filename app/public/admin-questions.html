@@ -3,70 +3,167 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Quản lý câu hỏi</title>
+
     <link rel="stylesheet" href="style.css" />
+
+    <style>
+      .import-word-box {
+        margin-top: 18px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #f8fafc;
+      }
+
+      .import-word-box h3 {
+        margin-top: 0;
+        margin-bottom: 8px;
+      }
+
+      .import-word-box p {
+        margin-top: 0;
+        color: #64748b;
+      }
+
+      .import-word-form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .import-word-form select,
+      .import-word-form input[type="file"] {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: white;
+        box-sizing: border-box;
+      }
+
+      .import-word-button {
+        width: fit-content;
+        padding: 11px 18px;
+        cursor: pointer;
+      }
+
+      .import-status {
+        display: none;
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        font-size: 14px;
+      }
+
+      .import-status.success {
+        display: block;
+        color: #166534;
+        background: #dcfce7;
+        border: 1px solid #86efac;
+      }
+
+      .import-status.error {
+        display: block;
+        color: #991b1b;
+        background: #fee2e2;
+        border: 1px solid #fca5a5;
+      }
+
+      .import-format {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: white;
+        border: 1px dashed #cbd5e1;
+        font-family: Consolas, monospace;
+        line-height: 1.7;
+        white-space: pre-line;
+      }
+    </style>
   </head>
 
   <body class="admin-page">
     <div class="admin-layout">
+      <!-- SIDEBAR -->
       <aside class="admin-sidebar">
         <div class="admin-logo">QUIZ ADMIN</div>
 
         <nav>
           <a href="/admin-dashboard.html">Tổng quan</a>
+
           <a href="/admin-quizzes.html">Quản lý đề thi</a>
-          <a href="/admin-questions.html" class="active">Quản lý câu hỏi</a>
+
+          <a href="/admin-questions.html" class="active"> Quản lý câu hỏi </a>
+
           <a href="/admin-students.html">Quản lý sinh viên</a>
+
           <a href="/admin-results.html">Kết quả thi</a>
         </nav>
 
         <button class="logout-button" onclick="logout()">Đăng xuất</button>
       </aside>
 
+      <!-- MAIN -->
       <main class="admin-main">
         <div class="admin-topbar">
           <h1>Quản lý câu hỏi</h1>
+
           <p>Thêm, sửa, xóa câu hỏi và đáp án.</p>
         </div>
 
+        <!-- =====================================================
+             THÊM CÂU HỎI THỦ CÔNG
+        ====================================================== -->
         <section class="admin-card">
           <h2>Thêm câu hỏi mới</h2>
 
           <div class="admin-form">
+            <!-- Chọn đề thi -->
             <select id="quizId"></select>
 
+            <!-- Nội dung câu hỏi -->
             <textarea
               id="questionText"
               placeholder="Nhập nội dung câu hỏi"
             ></textarea>
 
+            <!-- 4 đáp án -->
             <div class="answer-inputs">
               <input id="answer1" placeholder="Đáp án 1" />
+
               <input id="answer2" placeholder="Đáp án 2" />
+
               <input id="answer3" placeholder="Đáp án 3" />
+
               <input id="answer4" placeholder="Đáp án 4" />
             </div>
 
+            <!-- Chọn đáp án đúng -->
             <div class="correct-answer-box">
               <strong>Chọn đáp án đúng:</strong>
 
               <label>
                 <input type="checkbox" class="correct-checkbox" value="0" />
+
                 Đáp án 1
               </label>
 
               <label>
                 <input type="checkbox" class="correct-checkbox" value="1" />
+
                 Đáp án 2
               </label>
 
               <label>
                 <input type="checkbox" class="correct-checkbox" value="2" />
+
                 Đáp án 3
               </label>
 
               <label>
                 <input type="checkbox" class="correct-checkbox" value="3" />
+
                 Đáp án 4
               </label>
             </div>
@@ -77,6 +174,67 @@
 
         <br />
 
+        <!-- =====================================================
+             IMPORT CÂU HỎI TỪ WORD
+        ====================================================== -->
+        <section class="admin-card">
+          <h2>Import câu hỏi từ Word</h2>
+
+          <p>
+            Thêm hàng loạt câu hỏi từ file Word
+            <strong>.docx</strong>.
+          </p>
+
+          <div class="import-word-box">
+            <div class="import-word-form">
+              <!-- Chọn đề thi để import -->
+              <label for="importQuizId">
+                <strong>Đề thi:</strong>
+              </label>
+
+              <select id="importQuizId">
+                <option value="">Đang tải danh sách đề thi...</option>
+              </select>
+
+              <!-- Chọn file Word -->
+              <label for="wordFile">
+                <strong>File Word:</strong>
+              </label>
+
+              <input
+                type="file"
+                id="wordFile"
+                accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              />
+
+              <!-- Nút import -->
+              <button
+                type="button"
+                id="importWordButton"
+                class="import-word-button"
+                onclick="importWord()"
+              >
+                Import câu hỏi
+              </button>
+            </div>
+
+            <!-- Thông báo import -->
+            <div id="importStatus" class="import-status"></div>
+
+            <!-- Hướng dẫn -->
+            <div class="import-format">
+              Câu 1: Nội dung câu hỏi A. Đáp án A B. Đáp án B C. Đáp án C D. Đáp
+              án D Đáp án: A Câu 2: Câu hỏi nhiều đáp án A. Đáp án A B. Đáp án B
+              C. Đáp án C D. Đáp án D Đáp án: A,C
+            </div>
+          </div>
+        </section>
+
+        <br />
+
+        <!-- =====================================================
+             DANH SÁCH CÂU HỎI
+        ====================================================== -->
         <section class="admin-card">
           <h2>Danh sách câu hỏi</h2>
 
@@ -85,8 +243,11 @@
               <thead>
                 <tr>
                   <th>ID</th>
+
                   <th>Đề thi</th>
+
                   <th>Câu hỏi</th>
+
                   <th>Thao tác</th>
                 </tr>
               </thead>
@@ -99,50 +260,95 @@
     </div>
 
     <script>
+      // =====================================================
+      // KIỂM TRA ĐĂNG NHẬP ADMIN
+      // =====================================================
+
       const user = JSON.parse(localStorage.getItem("quiz_user"));
 
       if (!user || user.role !== "admin") {
         window.location.href = "/login.html";
       }
 
+      // =====================================================
+      // ĐĂNG XUẤT
+      // =====================================================
+
       function logout() {
         localStorage.removeItem("quiz_user");
+
         window.location.href = "/login.html";
       }
+
+      // =====================================================
+      // LOAD DANH SÁCH ĐỀ THI
+      // =====================================================
 
       async function loadQuizzes() {
         try {
           const response = await fetch("/api/admin/quizzes");
+
           const quizzes = await response.json();
 
+          // Select dùng khi thêm câu hỏi thủ công
           const select = document.getElementById("quizId");
+
+          // Select dùng khi import Word
+          const importSelect = document.getElementById("importQuizId");
+
           select.innerHTML = "";
 
+          importSelect.innerHTML = "";
+
+          // Nếu backend báo lỗi
           if (!response.ok) {
             select.innerHTML = `
-            <option value="">
-              Không tải được danh sách đề thi
-            </option>
-          `;
+              <option value="">
+                Không tải được danh sách đề thi
+              </option>
+            `;
+
+            importSelect.innerHTML = `
+              <option value="">
+                Không tải được danh sách đề thi
+              </option>
+            `;
+
             return;
           }
 
+          // Chưa có đề thi
           if (quizzes.length === 0) {
             select.innerHTML = `
-            <option value="">
-              Chưa có đề thi
-            </option>
-          `;
+              <option value="">
+                Chưa có đề thi
+              </option>
+            `;
+
+            importSelect.innerHTML = `
+              <option value="">
+                Chưa có đề thi
+              </option>
+            `;
+
             return;
           }
 
+          // Đổ dữ liệu đề thi vào 2 select
           quizzes.forEach((quiz) => {
-            select.innerHTML += `
-            <option value="${quiz.id}">
-              ${quiz.title}
-            </option>
-          `;
+            const option = `
+              <option value="${quiz.id}">
+                ${quiz.title}
+              </option>
+            `;
+
+            select.innerHTML += option;
+
+            importSelect.innerHTML += option;
           });
+
+          // Đồng bộ đề thi import với đề đang xem
+          importSelect.value = select.value;
 
           await loadQuestions();
         } catch (error) {
@@ -150,81 +356,104 @@
         }
       }
 
+      // =====================================================
+      // LOAD DANH SÁCH CÂU HỎI
+      // =====================================================
+
       async function loadQuestions() {
         try {
           const quizId = document.getElementById("quizId").value;
 
           const response = await fetch("/api/admin/questions");
+
           const questions = await response.json();
 
           const table = document.getElementById("questionTable");
+
           table.innerHTML = "";
 
           if (!response.ok) {
             table.innerHTML = `
-            <tr>
-              <td colspan="4">
-                Không tải được danh sách câu hỏi.
-              </td>
-            </tr>
-          `;
+              <tr>
+                <td colspan="4">
+                  Không tải được danh sách câu hỏi.
+                </td>
+              </tr>
+            `;
+
             return;
           }
 
           if (!quizId) {
             table.innerHTML = `
-            <tr>
-              <td colspan="4">
-                Vui lòng chọn đề thi.
-              </td>
-            </tr>
-          `;
+              <tr>
+                <td colspan="4">
+                  Vui lòng chọn đề thi.
+                </td>
+              </tr>
+            `;
+
             return;
           }
 
+          // Chỉ lấy câu hỏi thuộc đề đang chọn
           const filteredQuestions = questions.filter(
             (item) => String(item.quiz_id) === String(quizId),
           );
 
           if (filteredQuestions.length === 0) {
             table.innerHTML = `
-            <tr>
-              <td colspan="4">
-                Bài thi này chưa có câu hỏi.
-              </td>
-            </tr>
-          `;
+              <tr>
+                <td colspan="4">
+                  Bài thi này chưa có câu hỏi.
+                </td>
+              </tr>
+            `;
+
             return;
           }
 
+          // Hiển thị câu hỏi
           filteredQuestions.forEach((item) => {
             table.innerHTML += `
-            <tr>
-              <td>${item.id}</td>
+              <tr>
+                <td>
+                  ${item.id}
+                </td>
 
-              <td>${item.quiz_title}</td>
+                <td>
+                  ${escapeHtml(item.quiz_title)}
+                </td>
 
-              <td>${item.question_text}</td>
+                <td>
+                  ${escapeHtml(item.question_text)}
+                </td>
 
-              <td>
-                <button onclick="editQuestion(${item.id})">
-                  Sửa
-                </button>
+                <td>
+                  <button
+                    onclick="editQuestion(${item.id})"
+                  >
+                    Sửa
+                  </button>
 
-                <button
-                  class="danger-button"
-                  onclick="deleteQuestion(${item.id})"
-                >
-                  Xóa
-                </button>
-              </td>
-            </tr>
-          `;
+                  <button
+                    class="danger-button"
+                    onclick="deleteQuestion(${item.id})"
+                  >
+                    Xóa
+                  </button>
+                </td>
+              </tr>
+            `;
           });
         } catch (error) {
           console.error(error);
         }
       }
+
+      // =====================================================
+      // THÊM CÂU HỎI THỦ CÔNG
+      // =====================================================
 
       async function addQuestion() {
         const quizId = document.getElementById("quizId").value;
@@ -235,44 +464,57 @@
 
         const values = [
           document.getElementById("answer1").value.trim(),
+
           document.getElementById("answer2").value.trim(),
+
           document.getElementById("answer3").value.trim(),
+
           document.getElementById("answer4").value.trim(),
         ];
 
+        // Lấy danh sách checkbox đáp án đúng
         const checked = Array.from(
           document.querySelectorAll(".correct-checkbox:checked"),
         ).map((item) => Number(item.value));
 
         if (!quizId) {
           alert("Vui lòng chọn đề thi.");
+
           return;
         }
 
         if (!questionText || values.some((item) => !item)) {
           alert("Vui lòng nhập đầy đủ câu hỏi và 4 đáp án.");
+
           return;
         }
 
         if (checked.length === 0) {
           alert("Phải chọn ít nhất 1 đáp án đúng.");
+
           return;
         }
 
+        // Tạo dữ liệu answers gửi lên backend
         const answers = values.map((text, index) => ({
           text,
+
           isCorrect: checked.includes(index),
         }));
 
         try {
           const response = await fetch("/api/admin/questions", {
             method: "POST",
+
             headers: {
               "Content-Type": "application/json",
             },
+
             body: JSON.stringify({
               quizId,
+
               questionText,
+
               answers,
             }),
           });
@@ -281,26 +523,150 @@
 
           if (!response.ok) {
             alert(data.error || "Không thể thêm câu hỏi.");
+
             return;
           }
 
           alert("Thêm câu hỏi thành công.");
 
           clearForm();
+
           loadQuestions();
         } catch (error) {
           console.error(error);
+
           alert("Không thể kết nối đến máy chủ.");
         }
       }
 
+      // =====================================================
+      // IMPORT CÂU HỎI TỪ WORD
+      // =====================================================
+
+      async function importWord() {
+        const quizId = document.getElementById("importQuizId").value;
+
+        const fileInput = document.getElementById("wordFile");
+
+        const status = document.getElementById("importStatus");
+
+        const button = document.getElementById("importWordButton");
+
+        // Reset thông báo
+        status.className = "import-status";
+
+        status.textContent = "";
+
+        // Kiểm tra đề thi
+        if (!quizId) {
+          showImportStatus("Vui lòng chọn đề thi.", false);
+
+          return;
+        }
+
+        // Kiểm tra file
+        if (!fileInput.files || fileInput.files.length === 0) {
+          showImportStatus("Vui lòng chọn file Word .docx.", false);
+
+          return;
+        }
+
+        const file = fileInput.files[0];
+
+        // Chỉ cho phép .docx
+        if (!file.name.toLowerCase().endsWith(".docx")) {
+          showImportStatus("Chỉ hỗ trợ file Word định dạng .docx.", false);
+
+          return;
+        }
+
+        // FormData dùng để gửi file
+        const formData = new FormData();
+
+        formData.append("quizId", quizId);
+
+        formData.append("file", file);
+
+        try {
+          // Khóa nút trong lúc upload
+          button.disabled = true;
+
+          button.textContent = "Đang import...";
+
+          const response = await fetch("/api/admin/questions/import-word", {
+            method: "POST",
+
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          // Nếu backend báo lỗi
+          if (!response.ok) {
+            let message = data.error || "Không thể import file Word.";
+
+            // Backend có trả details
+            if (Array.isArray(data.details) && data.details.length > 0) {
+              message += "\n\n" + data.details.join("\n");
+            }
+
+            showImportStatus(message, false);
+
+            return;
+          }
+
+          // Thành công
+          showImportStatus(data.message || "Import câu hỏi thành công.", true);
+
+          // Xóa file đang chọn
+          fileInput.value = "";
+
+          // Chuyển danh sách sang đề vừa import
+          document.getElementById("quizId").value = quizId;
+
+          // Load lại danh sách
+          await loadQuestions();
+        } catch (error) {
+          console.error(error);
+
+          showImportStatus("Không thể kết nối đến máy chủ.", false);
+        } finally {
+          // Mở lại nút
+          button.disabled = false;
+
+          button.textContent = "Import câu hỏi";
+        }
+      }
+
+      // =====================================================
+      // HIỂN THỊ THÔNG BÁO IMPORT
+      // =====================================================
+
+      function showImportStatus(message, success) {
+        const status = document.getElementById("importStatus");
+
+        status.textContent = message;
+
+        if (success) {
+          status.className = "import-status success";
+        } else {
+          status.className = "import-status error";
+        }
+      }
+
+      // =====================================================
+      // SỬA CÂU HỎI
+      // =====================================================
+
       async function editQuestion(id) {
         try {
           const response = await fetch(`/api/admin/questions/${id}`);
+
           const item = await response.json();
 
           if (!response.ok) {
             alert(item.error || "Không tải được câu hỏi.");
+
             return;
           }
 
@@ -312,11 +678,13 @@
 
           if (!newQuestion.trim()) {
             alert("Nội dung câu hỏi không được để trống.");
+
             return;
           }
 
           const answers = [];
 
+          // Sửa từng đáp án
           for (let i = 0; i < item.answers.length; i++) {
             const newText = prompt(
               `Đáp án ${i + 1}:`,
@@ -329,15 +697,18 @@
 
             if (!newText.trim()) {
               alert("Đáp án không được để trống.");
+
               return;
             }
 
             answers.push({
               text: newText.trim(),
+
               isCorrect: Boolean(item.answers[i].is_correct),
             });
           }
 
+          // Lấy đáp án đúng hiện tại
           const oldCorrect = item.answers
             .map((answer, index) => {
               return answer.is_correct ? index + 1 : null;
@@ -345,6 +716,7 @@
             .filter(Boolean)
             .join(",");
 
+          // Cho admin nhập lại đáp án đúng
           const correctInput = prompt(
             "Nhập số các đáp án đúng, cách nhau bằng dấu phẩy.\nVí dụ: 1,3",
             oldCorrect,
@@ -354,6 +726,7 @@
             return;
           }
 
+          // Chuẩn hóa đáp án đúng
           const correctNumbers = [
             ...new Set(
               correctInput
@@ -365,21 +738,27 @@
 
           if (correctNumbers.length === 0) {
             alert("Phải có ít nhất 1 đáp án đúng.");
+
             return;
           }
 
+          // Cập nhật lại isCorrect
           answers.forEach((answer, index) => {
             answer.isCorrect = correctNumbers.includes(index + 1);
           });
 
           const updateResponse = await fetch(`/api/admin/questions/${id}`, {
             method: "PUT",
+
             headers: {
               "Content-Type": "application/json",
             },
+
             body: JSON.stringify({
               quizId: item.quiz_id,
+
               questionText: newQuestion.trim(),
+
               answers,
             }),
           });
@@ -388,6 +767,7 @@
 
           if (!updateResponse.ok) {
             alert(data.error || "Không thể cập nhật câu hỏi.");
+
             return;
           }
 
@@ -396,9 +776,14 @@
           loadQuestions();
         } catch (error) {
           console.error(error);
+
           alert("Không thể kết nối đến máy chủ.");
         }
       }
+
+      // =====================================================
+      // XÓA CÂU HỎI
+      // =====================================================
 
       async function deleteQuestion(id) {
         const ok = confirm("Bạn có chắc muốn xóa câu hỏi này?");
@@ -416,6 +801,7 @@
 
           if (!response.ok) {
             alert(data.error || "Không thể xóa câu hỏi.");
+
             return;
           }
 
@@ -424,15 +810,24 @@
           loadQuestions();
         } catch (error) {
           console.error(error);
+
           alert("Không thể kết nối đến máy chủ.");
         }
       }
 
+      // =====================================================
+      // XÓA DỮ LIỆU FORM THỦ CÔNG
+      // =====================================================
+
       function clearForm() {
         document.getElementById("questionText").value = "";
+
         document.getElementById("answer1").value = "";
+
         document.getElementById("answer2").value = "";
+
         document.getElementById("answer3").value = "";
+
         document.getElementById("answer4").value = "";
 
         document.querySelectorAll(".correct-checkbox").forEach((item) => {
@@ -440,9 +835,42 @@
         });
       }
 
+      // =====================================================
+      // CHỐNG HTML ĐƯỢC CHÈN VÀO BẢNG
+      // =====================================================
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      // =====================================================
+      // SỰ KIỆN CHỌN ĐỀ THI
+      // =====================================================
+
+      document.getElementById("quizId").addEventListener("change", function () {
+        // Load câu hỏi của đề vừa chọn
+        loadQuestions();
+
+        // Đồng bộ luôn đề ở phần Import Word
+        document.getElementById("importQuizId").value = this.value;
+      });
+
+      // Nếu admin đổi đề ở phần Import
       document
-        .getElementById("quizId")
-        .addEventListener("change", loadQuestions);
+        .getElementById("importQuizId")
+        .addEventListener("change", function () {
+          // Không bắt buộc đổi đề đang xem,
+          // chỉ giữ nguyên đề import đã chọn.
+        });
+
+      // =====================================================
+      // KHỞI ĐỘNG TRANG
+      // =====================================================
 
       loadQuizzes();
     </script>

@@ -3,52 +3,72 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>Sinh viên - Quiz System</title>
-
     <link rel="stylesheet" href="style.css" />
   </head>
 
   <body class="student-page">
-    <header class="student-header">
-      <div class="student-header-inner">
-        <div>
-          <h1>HỆ THỐNG THI TRẮC NGHIỆM</h1>
-          <p id="student-welcome">Xin chào</p>
+    <header class="student-topbar">
+      <div class="student-topbar-inner">
+        <div class="student-brand">
+          <div class="student-brand-icon">🎓</div>
+          <div>
+            <h1>Hệ thống thi trắc nghiệm</h1>
+            <p id="student-welcome">Xin chào</p>
+          </div>
         </div>
 
-        <button class="student-logout" onclick="logout()">Đăng xuất</button>
+        <nav class="student-nav">
+          <a href="/student-dashboard.html" class="active"> Đề thi </a>
+
+          <a href="/results.html"> Lịch sử </a>
+
+          <a href="/student-profile.html">Hồ sơ</a>
+
+          <button onclick="logout()" class="student-nav-logout">
+            Đăng xuất
+          </button>
+        </nav>
       </div>
     </header>
 
-    <main class="student-container">
+    <main class="student-main">
+      <section class="student-hero">
+        <div>
+          <h2>Danh Sách Đề Thi</h2>
+          <p>
+            Lựa chọn đề thi để bắt đầu làm bài và kiểm tra kiến thức của bạn.
+          </p>
+        </div>
+
+        <div class="student-search-box">
+          <span>⌕</span>
+          <input
+            id="quizSearch"
+            type="text"
+            placeholder="Tìm kiếm tên đề thi..."
+          />
+        </div>
+      </section>
+
       <section class="student-stats">
         <div class="student-stat-card">
           <span>Bài thi hiện có</span>
-          <strong id="student-total-quizzes"> 0 </strong>
+          <strong id="student-total-quizzes">0</strong>
         </div>
 
         <div class="student-stat-card">
           <span>Lượt thi</span>
-          <strong id="student-total-results"> 0 </strong>
+          <strong id="student-total-results">0</strong>
         </div>
 
         <div class="student-stat-card">
           <span>Điểm trung bình</span>
-          <strong id="student-average-score"> 0 </strong>
+          <strong id="student-average-score">0.00</strong>
         </div>
       </section>
 
-      <section class="student-card">
-        <div class="student-section-title">
-          <div>
-            <h2>Danh sách bài thi</h2>
-            <p>Chọn bài thi để bắt đầu làm bài.</p>
-          </div>
-
-          <a href="/results.html" class="student-link-button"> Xem kết quả </a>
-        </div>
-
+      <section>
         <div id="student-quiz-list" class="student-quiz-grid">
           Đang tải dữ liệu...
         </div>
@@ -65,63 +85,57 @@
       document.getElementById("student-welcome").textContent =
         "Xin chào, " + user.full_name;
 
-      // ===============================
-      // LOGOUT
-      // ===============================
+      let allQuizzes = [];
 
       function logout() {
         localStorage.removeItem("quiz_user");
-
         window.location.href = "/login.html";
       }
-
-      // ===============================
-      // LOAD QUIZZES
-      // ===============================
 
       async function loadStudentDashboard() {
         try {
           const quizResponse = await fetch("/api/quizzes");
-
           const quizzes = await quizResponse.json();
 
+          allQuizzes = Array.isArray(quizzes) ? quizzes : [];
+
           document.getElementById("student-total-quizzes").textContent =
-            quizzes.length;
+            allQuizzes.length;
 
-          renderQuizzes(quizzes);
+          renderQuizzes(allQuizzes);
 
-          const resultsResponse = await fetch("/api/results");
+          const resultsResponse = await fetch(`/api/my-results/${user.id}`);
 
-          const results = await resultsResponse.json();
+          const myResults = await resultsResponse.json();
 
-          const myResults = results.filter(
-            (item) => item.student_name === user.full_name,
-          );
+          const safeResults = Array.isArray(myResults) ? myResults : [];
 
           document.getElementById("student-total-results").textContent =
-            myResults.length;
+            safeResults.length;
 
           let average = 0;
 
-          if (myResults.length > 0) {
-            const total = myResults.reduce(
-              (sum, item) => sum + Number(item.score),
+          if (safeResults.length > 0) {
+            const total = safeResults.reduce(
+              (sum, item) => sum + Number(item.score || 0),
               0,
             );
 
-            average = total / myResults.length;
+            average = total / safeResults.length;
           }
 
           document.getElementById("student-average-score").textContent =
             average.toFixed(2);
         } catch (error) {
           console.error(error);
+
+          document.getElementById("student-quiz-list").innerHTML = `
+          <div class="student-empty-box">
+            Không tải được danh sách đề thi.
+          </div>
+        `;
         }
       }
-
-      // ===============================
-      // HIỂN THỊ BÀI THI
-      // ===============================
 
       function renderQuizzes(quizzes) {
         const container = document.getElementById("student-quiz-list");
@@ -129,49 +143,124 @@
         container.innerHTML = "";
 
         if (quizzes.length === 0) {
-          container.innerHTML = "<p>Chưa có bài thi.</p>";
+          container.innerHTML = `
+          <div class="student-empty-box">
+            Chưa có bài thi phù hợp.
+          </div>
+        `;
 
           return;
         }
 
-        quizzes.forEach((quiz) => {
-          const div = document.createElement("div");
+        quizzes.forEach((quiz, index) => {
+          const div = document.createElement("article");
 
-          div.className = "student-quiz-card";
+          div.className = "student-exam-card";
 
           div.innerHTML = `
+          <div class="student-exam-card-top">
+            <div class="student-exam-icon">
+              ${index % 3 === 0 ? "📝" : index % 3 === 1 ? "💻" : "📘"}
+            </div>
 
-                <div class="quiz-icon">
-                    ?
-                </div>
+            <span class="student-exam-badge">
+              Đề ${quiz.id}
+            </span>
+          </div>
 
-                <h3>
-                    ${quiz.title}
-                </h3>
+          <h3>
+            ${escapeHtml(quiz.title)}
+          </h3>
 
-                <p>
-                    ${quiz.description || ""}
-                </p>
+          <p class="student-exam-description">
+            ${escapeHtml(
+              quiz.description || "Bài thi trắc nghiệm dành cho sinh viên.",
+            )}
+          </p>
 
-                <button
-                    onclick="startQuiz(${quiz.id})"
-                >
-                    Bắt đầu làm bài
-                </button>
+          <div class="student-exam-divider"></div>
 
-            `;
+          <div class="student-exam-meta">
+            <div>
+              <span class="meta-label">
+                Trạng thái
+              </span>
+
+              <strong>
+                Sẵn sàng
+              </strong>
+            </div>
+
+            <div>
+              <span class="meta-label">
+                Hình thức
+              </span>
+
+              <strong>
+                Trắc nghiệm
+              </strong>
+            </div>
+          </div>
+
+          <div class="student-exam-actions">
+            <button
+              class="student-detail-button"
+              onclick="showQuizDetail(${quiz.id})"
+            >
+              Chi tiết
+            </button>
+
+            <button
+              class="student-start-button"
+              onclick="startQuiz(${quiz.id})"
+            >
+              Bắt đầu làm bài
+            </button>
+          </div>
+        `;
 
           container.appendChild(div);
         });
       }
 
-      // ===============================
-      // BẮT ĐẦU LÀM BÀI
-      // ===============================
-
       function startQuiz(id) {
-        window.location.href = "/quiz.html?id=" + id;
+        window.location.href = `/quiz.html?id=${id}`;
       }
+
+      function showQuizDetail(id) {
+        const quiz = allQuizzes.find((item) => Number(item.id) === Number(id));
+
+        if (!quiz) {
+          return;
+        }
+
+        alert(`${quiz.title}\n\n${quiz.description || "Không có mô tả."}`);
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      document
+        .getElementById("quizSearch")
+        .addEventListener("input", function () {
+          const keyword = this.value.trim().toLowerCase();
+
+          const filtered = allQuizzes.filter((quiz) => {
+            const title = String(quiz.title || "").toLowerCase();
+
+            const description = String(quiz.description || "").toLowerCase();
+
+            return title.includes(keyword) || description.includes(keyword);
+          });
+
+          renderQuizzes(filtered);
+        });
 
       loadStudentDashboard();
     </script>

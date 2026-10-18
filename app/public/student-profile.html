@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Hồ sơ sinh viên - Quiz System</title>
+
+    <link rel="stylesheet" href="style.css" />
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+
+        font-family: Arial, Helvetica, sans-serif;
+
+        background: #f4f7fb;
+
+        color: #0f172a;
+      }
+
+      /* =========================================
+       TOP BAR
+    ========================================= */
+
+      .profile-topbar {
+        height: 66px;
+
+        background: white;
+
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .profile-topbar-inner {
+        width: 100%;
+        max-width: 1540px;
+
+        height: 100%;
+
+        margin: 0 auto;
+
+        padding: 0 28px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: space-between;
+      }
+
+      .profile-brand {
+        display: flex;
+
+        align-items: center;
+
+        gap: 14px;
+      }
+
+      .profile-brand-icon {
+        width: 54px;
+        height: 54px;
+
+        border-radius: 13px;
+
+        background: #eff6ff;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 27px;
+      }
+
+      .profile-brand-text h1 {
+        margin: 0;
+
+        font-size: 22px;
+
+        color: #0f172a;
+      }
+
+      .profile-brand-text p {
+        margin: 3px 0 0;
+
+        font-size: 14px;
+
+        color: #64748b;
+      }
+
+      /* =========================================
+       NAV
+    ========================================= */
+
+      .profile-nav {
+        display: flex;
+
+        align-items: center;
+
+        gap: 8px;
+      }
+
+      .profile-nav a,
+      .profile-nav button {
+        min-height: 42px;
+
+        padding: 0 17px;
+
+        border-radius: 9px;
+
+        display: inline-flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 14px;
+
+        text-decoration: none;
+
+        cursor: pointer;
+      }
+
+      .profile-nav a {
+        color: #334155;
+
+        border: 1px solid transparent;
+      }
+
+      .profile-nav a:hover {
+        background: #f8fafc;
+      }
+
+      .profile-nav a.active {
+        color: #2563eb;
+
+        background: #eff6ff;
+      }
+
+      .profile-nav button {
+        border: 1px solid #cbd5e1;
+
+        background: white;
+
+        color: #334155;
+      }
+
+      .profile-nav button:hover {
+        background: #f8fafc;
+      }
+
+      /* =========================================
+       PAGE
+    ========================================= */
+
+      .profile-page {
+        min-height: calc(100vh - 66px);
+
+        padding: 78px 20px;
+      }
+
+      .profile-container {
+        width: 100%;
+        max-width: 730px;
+
+        margin: 0 auto;
+      }
+
+      /* =========================================
+       CARD
+    ========================================= */
+
+      .profile-card {
+        width: 100%;
+
+        padding: 38px 40px;
+
+        background: white;
+
+        border: 1px solid #dce4ee;
+
+        border-radius: 16px;
+
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      }
+
+      /* =========================================
+       AVATAR
+    ========================================= */
+
+      .profile-header {
+        text-align: center;
+
+        padding-bottom: 30px;
+
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .profile-avatar {
+        width: 96px;
+        height: 96px;
+
+        margin: 0 auto 18px;
+
+        border-radius: 50%;
+
+        background: #eff6ff;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        font-size: 47px;
+      }
+
+      .profile-name {
+        margin: 0;
+
+        font-size: 27px;
+
+        color: #0f172a;
+      }
+
+      .profile-role {
+        margin-top: 16px;
+
+        color: #64748b;
+
+        font-size: 16px;
+      }
+
+      /* =========================================
+       INFORMATION
+    ========================================= */
+
+      .profile-information {
+        width: 100%;
+      }
+
+      .profile-row {
+        min-height: 62px;
+
+        padding: 0 6px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: space-between;
+
+        gap: 30px;
+
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .profile-row-label {
+        color: #64748b;
+
+        font-size: 16px;
+      }
+
+      .profile-row-value {
+        color: #0f172a;
+
+        font-size: 16px;
+
+        font-weight: 600;
+
+        text-align: right;
+      }
+
+      .profile-student-code {
+        color: #2563eb;
+
+        font-weight: 700;
+
+        letter-spacing: 0.3px;
+      }
+
+      /* =========================================
+       LOADING
+    ========================================= */
+
+      .profile-loading {
+        padding: 80px 20px;
+
+        text-align: center;
+
+        color: #64748b;
+      }
+
+      .profile-error {
+        padding: 20px;
+
+        border: 1px solid #fecaca;
+
+        border-radius: 10px;
+
+        background: #fef2f2;
+
+        color: #b91c1c;
+
+        text-align: center;
+      }
+
+      /* =========================================
+       RESPONSIVE
+    ========================================= */
+
+      @media (max-width: 760px) {
+        .profile-topbar {
+          height: auto;
+        }
+
+        .profile-topbar-inner {
+          padding: 15px;
+
+          flex-direction: column;
+
+          align-items: flex-start;
+
+          gap: 15px;
+        }
+
+        .profile-nav {
+          width: 100%;
+
+          overflow-x: auto;
+        }
+
+        .profile-page {
+          padding: 30px 15px;
+        }
+
+        .profile-card {
+          padding: 28px 20px;
+        }
+
+        .profile-row {
+          align-items: flex-start;
+
+          flex-direction: column;
+
+          gap: 7px;
+
+          padding: 16px 4px;
+        }
+
+        .profile-row-value {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- =========================================
+       TOP BAR
+  ========================================= -->
+
+    <header class="profile-topbar">
+      <div class="profile-topbar-inner">
+        <div class="profile-brand">
+          <div class="profile-brand-icon">🎓</div>
+
+          <div class="profile-brand-text">
+            <h1>Hệ thống thi trắc nghiệm</h1>
+
+            <p>Thông tin sinh viên</p>
+          </div>
+        </div>
+
+        <nav class="profile-nav">
+          <a href="/student-dashboard.html"> Đề thi </a>
+
+          <a href="/results.html"> Lịch sử </a>
+
+          <a href="/student-profile.html" class="active"> Hồ sơ </a>
+
+          <button type="button" onclick="logout()">Đăng xuất</button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- =========================================
+       PAGE
+  ========================================= -->
+
+    <main class="profile-page">
+      <div class="profile-container">
+        <div id="profileContent" class="profile-loading">Đang tải hồ sơ...</div>
+      </div>
+    </main>
+
+    <script>
+      // =====================================================
+      // USER
+      // =====================================================
+
+      const localUser = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!localUser || localUser.role !== "student") {
+        window.location.href = "/login.html";
+      }
+
+      // =====================================================
+      // LOAD PROFILE
+      // =====================================================
+
+      async function loadProfile() {
+        const profileContent = document.getElementById("profileContent");
+
+        try {
+          const response = await fetch(`/api/student/profile/${localUser.id}`);
+
+          const user = await response.json();
+
+          if (!response.ok) {
+            throw new Error(user.error || "Không tải được hồ sơ.");
+          }
+
+          /*
+        Cập nhật lại localStorage để
+        các trang khác cũng có student_code mới.
+      */
+
+          const updatedUser = {
+            ...localUser,
+
+            id: user.id,
+
+            full_name: user.full_name,
+
+            student_code: user.student_code,
+
+            username: user.username,
+
+            role: user.role,
+          };
+
+          localStorage.setItem(
+            "quiz_user",
+
+            JSON.stringify(updatedUser),
+          );
+
+          renderProfile(user);
+        } catch (error) {
+          console.error(error);
+
+          profileContent.className = "profile-error";
+
+          profileContent.innerHTML = `
+        Không thể tải hồ sơ sinh viên.
+        <br><br>
+        ${escapeHtml(error.message)}
+      `;
+        }
+      }
+
+      // =====================================================
+      // RENDER PROFILE
+      // =====================================================
+
+      function renderProfile(user) {
+        const profileContent = document.getElementById("profileContent");
+
+        const studentCode = user.student_code
+          ? user.student_code
+          : "Chưa cập nhật";
+
+        profileContent.className = "";
+
+        profileContent.innerHTML = `
+
+      <section class="profile-card">
+
+        <div class="profile-header">
+
+          <div class="profile-avatar">
+            👤
+          </div>
+
+          <h2 class="profile-name">
+            ${escapeHtml(user.full_name)}
+          </h2>
+
+          <div class="profile-role">
+            Sinh viên
+          </div>
+
+        </div>
+
+        <div class="profile-information">
+
+          <div class="profile-row">
+
+            <span class="profile-row-label">
+              Họ và tên
+            </span>
+
+            <span class="profile-row-value">
+              ${escapeHtml(user.full_name)}
+            </span>
+
+          </div>
+
+          <div class="profile-row">
+
+            <span class="profile-row-label">
+              Mã sinh viên
+            </span>
+
+            <span
+              class="
+                profile-row-value
+                profile-student-code
+              "
+            >
+              ${escapeHtml(studentCode)}
+            </span>
+
+          </div>
+
+          <div class="profile-row">
+
+            <span class="profile-row-label">
+              Tên đăng nhập
+            </span>
+
+            <span class="profile-row-value">
+              ${escapeHtml(user.username)}
+            </span>
+
+          </div>
+
+          <div class="profile-row">
+
+            <span class="profile-row-label">
+              Vai trò
+            </span>
+
+            <span class="profile-row-value">
+              Sinh viên
+            </span>
+
+          </div>
+
+        </div>
+
+      </section>
+    `;
+      }
+
+      // =====================================================
+      // LOGOUT
+      // =====================================================
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+
+        window.location.href = "/login.html";
+      }
+
+      // =====================================================
+      // ESCAPE HTML
+      // =====================================================
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // =====================================================
+      // START
+      // =====================================================
+
+      loadProfile();
+    </script>
+  </body>
+</html>

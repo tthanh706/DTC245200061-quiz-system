@@ -2,165 +2,1138 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quản lý sinh viên</title>
+
+    <title>Quản lý sinh viên - Quiz System</title>
+
     <link rel="stylesheet" href="style.css" />
-  </head>
 
-  <body class="admin-page">
-    <div class="admin-layout">
-      <aside class="admin-sidebar">
-        <div class="admin-logo">QUIZ ADMIN</div>
-
-        <nav>
-          <a href="/admin-dashboard.html">Tổng quan</a>
-          <a href="/admin-quizzes.html">Quản lý đề thi</a>
-          <a href="/admin-questions.html">Quản lý câu hỏi</a>
-          <a href="/admin-students.html" class="active">Quản lý sinh viên</a>
-          <a href="/admin-results.html">Kết quả thi</a>
-        </nav>
-
-        <button class="logout-button" onclick="logout()">Đăng xuất</button>
-      </aside>
-
-      <main class="admin-main">
-        <div class="admin-topbar">
-          <h1>Quản lý sinh viên</h1>
-          <p>Thêm, sửa và xóa tài khoản sinh viên.</p>
-        </div>
-
-        <section class="admin-card">
-          <h2>Thêm sinh viên mới</h2>
-
-          <div class="admin-form">
-            <input id="fullName" placeholder="Họ và tên sinh viên" />
-
-            <input id="username" placeholder="Tên đăng nhập" />
-
-            <input id="password" type="password" placeholder="Mật khẩu" />
-
-            <button onclick="addStudent()">Thêm sinh viên</button>
-          </div>
-        </section>
-
-        <br />
-
-        <section class="admin-card">
-          <h2>Danh sách sinh viên</h2>
-
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Họ tên</th>
-                  <th>Tên đăng nhập</th>
-                  <th>Ngày tạo</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-
-              <tbody id="studentTable"></tbody>
-            </table>
-          </div>
-        </section>
-      </main>
-    </div>
-
-    <script>
-      const user = JSON.parse(localStorage.getItem("quiz_user"));
-
-      if (!user || user.role !== "admin") {
-        window.location.href = "/login.html";
+    <style>
+      * {
+        box-sizing: border-box;
       }
 
-      function logout() {
-        localStorage.removeItem("quiz_user");
-        window.location.href = "/login.html";
+      body.students-admin-page {
+        margin: 0;
+
+        min-height: 100vh;
+
+        background: #f4f7fb;
+
+        font-family: Arial, Helvetica, sans-serif;
+
+        color: #0f172a;
       }
 
-      async function loadStudents() {
-        try {
-          const response = await fetch("/api/admin/students");
+      /* =========================================
+       SIDEBAR
+    ========================================= */
 
-          const students = await response.json();
+      .students-sidebar {
+        position: fixed;
 
-          const table = document.getElementById("studentTable");
+        top: 0;
+        left: 0;
+        bottom: 0;
 
-          table.innerHTML = "";
+        width: 255px;
 
-          if (!response.ok) {
-            table.innerHTML = `
-            <tr>
-              <td colspan="5">
-                Không tải được danh sách sinh viên.
-              </td>
-            </tr>
-          `;
-            return;
-          }
+        padding: 32px 14px 22px;
 
-          if (students.length === 0) {
-            table.innerHTML = `
-            <tr>
-              <td colspan="5">
-                Chưa có sinh viên.
-              </td>
-            </tr>
-          `;
-            return;
-          }
+        background: linear-gradient(180deg, #2864eb 0%, #1f56db 100%);
 
-          students.forEach((student) => {
-            const date = student.created_at
-              ? new Date(student.created_at).toLocaleString("vi-VN")
-              : "";
+        color: white;
 
-            table.innerHTML += `
-            <tr>
-              <td>${student.id}</td>
+        z-index: 100;
+      }
 
-              <td>${student.full_name}</td>
+      .students-sidebar-brand {
+        padding: 14px 0 22px;
+      }
 
-              <td>${student.username}</td>
+      .students-sidebar-brand h2 {
+        margin: 0 0 14px;
 
-              <td>${date}</td>
+        font-size: 25px;
 
-              <td>
-                <button
-                  onclick="editStudent(
-                    ${student.id},
-                    '${escapeText(student.full_name)}',
-                    '${escapeText(student.username)}'
-                  )"
-                >
-                  Sửa
-                </button>
+        color: white;
+      }
 
-                <button
-                  class="danger-button"
-                  onclick="deleteStudent(${student.id})"
-                >
-                  Xóa
-                </button>
-              </td>
-            </tr>
-          `;
-          });
-        } catch (error) {
-          console.error(error);
+      .students-sidebar-brand p {
+        margin: 0;
+
+        font-size: 16px;
+
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .students-sidebar-nav {
+        display: flex;
+
+        flex-direction: column;
+
+        gap: 6px;
+      }
+
+      .students-sidebar-nav a {
+        display: block;
+
+        padding: 14px 16px;
+
+        border-radius: 11px;
+
+        color: white;
+
+        text-decoration: none;
+
+        font-size: 16px;
+
+        transition: 0.15s;
+      }
+
+      .students-sidebar-nav a:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .students-sidebar-nav a.active {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .students-logout {
+        position: absolute;
+
+        left: 14px;
+        right: 14px;
+        bottom: 28px;
+
+        min-height: 44px;
+
+        border: 0;
+
+        border-radius: 8px;
+
+        background: rgba(255, 255, 255, 0.12);
+
+        color: white;
+
+        font-size: 14px;
+
+        font-weight: 600;
+
+        cursor: pointer;
+      }
+
+      .students-logout:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* =========================================
+       MAIN
+    ========================================= */
+
+      .students-content {
+        margin-left: 255px;
+
+        min-height: 100vh;
+
+        padding: 34px;
+
+        background: #f4f7fb;
+      }
+
+      .students-page-header {
+        margin-bottom: 25px;
+      }
+
+      .students-page-header h1 {
+        margin: 0 0 7px;
+
+        font-size: 29px;
+
+        color: #0f172a;
+      }
+
+      .students-page-header p {
+        margin: 0;
+
+        color: #64748b;
+
+        font-size: 14px;
+      }
+
+      /* =========================================
+       CARD
+    ========================================= */
+
+      .students-card {
+        width: 100%;
+
+        margin-bottom: 24px;
+
+        padding: 28px 30px;
+
+        border: 1px solid #e2e8f0;
+
+        border-radius: 15px;
+
+        background: white;
+
+        box-shadow: 0 3px 14px rgba(15, 23, 42, 0.035);
+      }
+
+      .students-card-title {
+        margin-bottom: 22px;
+      }
+
+      .students-card-title h2 {
+        margin: 0 0 6px;
+
+        font-size: 24px;
+
+        color: #0f172a;
+      }
+
+      .students-card-title p {
+        margin: 0;
+
+        color: #64748b;
+
+        font-size: 14px;
+      }
+
+      /* =========================================
+       ADD FORM
+    ========================================= */
+
+      .students-add-form {
+        display: grid;
+
+        grid-template-columns:
+          1.2fr
+          1fr
+          1fr
+          1fr
+          auto;
+
+        gap: 14px;
+
+        align-items: end;
+      }
+
+      .students-field label {
+        display: block;
+
+        margin-bottom: 8px;
+
+        color: #334155;
+
+        font-size: 13px;
+
+        font-weight: 600;
+      }
+
+      .students-field input {
+        width: 100%;
+
+        min-height: 46px;
+
+        padding: 0 13px;
+
+        border: 1px solid #cbd5e1;
+
+        border-radius: 8px;
+
+        background: white;
+
+        color: #0f172a;
+
+        font-size: 14px;
+
+        outline: none;
+      }
+
+      .students-field input:focus {
+        border-color: #2563eb;
+
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .students-add-button {
+        min-height: 46px;
+
+        padding: 0 22px;
+
+        border: 0;
+
+        border-radius: 8px;
+
+        background: #2563eb;
+
+        color: white;
+
+        font-size: 14px;
+
+        font-weight: 600;
+
+        cursor: pointer;
+
+        white-space: nowrap;
+      }
+
+      .students-add-button:hover {
+        background: #1d4ed8;
+      }
+
+      /* =========================================
+       MESSAGE
+    ========================================= */
+
+      .students-message {
+        display: none;
+
+        margin-top: 15px;
+
+        padding: 12px 14px;
+
+        border-radius: 8px;
+
+        font-size: 14px;
+      }
+
+      .students-message.show {
+        display: block;
+      }
+
+      .students-message.success {
+        color: #15803d;
+
+        border: 1px solid #bbf7d0;
+
+        background: #f0fdf4;
+      }
+
+      .students-message.error {
+        color: #b91c1c;
+
+        border: 1px solid #fecaca;
+
+        background: #fef2f2;
+      }
+
+      /* =========================================
+       TABLE
+    ========================================= */
+
+      .students-table-wrapper {
+        width: 100%;
+
+        overflow-x: auto;
+
+        border: 1px solid #e2e8f0;
+
+        border-radius: 10px;
+      }
+
+      .students-table {
+        width: 100%;
+
+        border-collapse: collapse;
+
+        background: white;
+      }
+
+      .students-table th {
+        padding: 15px 17px;
+
+        background: #eaf0f7;
+
+        color: #1e293b;
+
+        text-align: left;
+
+        font-size: 14px;
+
+        font-weight: 700;
+
+        border-bottom: 1px solid #d7e0ea;
+      }
+
+      .students-table td {
+        padding: 15px 17px;
+
+        color: #334155;
+
+        font-size: 14px;
+
+        border-bottom: 1px solid #e2e8f0;
+
+        vertical-align: middle;
+      }
+
+      .students-table tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .students-table tbody tr:hover {
+        background: #f8fafc;
+      }
+
+      .student-code-value {
+        color: #2563eb;
+
+        font-weight: 700;
+      }
+
+      .student-code-empty {
+        color: #94a3b8;
+
+        font-style: italic;
+      }
+
+      .students-actions {
+        display: flex;
+
+        gap: 8px;
+      }
+
+      .students-edit-button,
+      .students-delete-button {
+        min-height: 36px;
+
+        padding: 0 14px;
+
+        border: 0;
+
+        border-radius: 7px;
+
+        color: white;
+
+        font-size: 13px;
+
+        font-weight: 600;
+
+        cursor: pointer;
+      }
+
+      .students-edit-button {
+        background: #2563eb;
+      }
+
+      .students-edit-button:hover {
+        background: #1d4ed8;
+      }
+
+      .students-delete-button {
+        background: #dc2626;
+      }
+
+      .students-delete-button:hover {
+        background: #b91c1c;
+      }
+
+      .students-empty {
+        padding: 30px !important;
+
+        text-align: center;
+
+        color: #64748b !important;
+      }
+
+      /* =========================================
+       MODAL
+    ========================================= */
+
+      .students-modal {
+        position: fixed;
+
+        inset: 0;
+
+        z-index: 9999;
+
+        display: none;
+
+        align-items: center;
+
+        justify-content: center;
+
+        padding: 20px;
+
+        background: rgba(15, 23, 42, 0.62);
+      }
+
+      .students-modal.show {
+        display: flex;
+      }
+
+      .students-modal-box {
+        width: 100%;
+
+        max-width: 560px;
+
+        overflow: hidden;
+
+        border-radius: 16px;
+
+        background: white;
+
+        box-shadow: 0 25px 70px rgba(15, 23, 42, 0.3);
+      }
+
+      .students-modal-header {
+        display: flex;
+
+        align-items: center;
+
+        justify-content: space-between;
+
+        gap: 15px;
+
+        padding: 22px 24px;
+
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .students-modal-header h2 {
+        margin: 0 0 5px;
+
+        font-size: 21px;
+
+        color: #0f172a;
+      }
+
+      .students-modal-header p {
+        margin: 0;
+
+        color: #64748b;
+
+        font-size: 13px;
+      }
+
+      .students-modal-close {
+        width: 40px;
+
+        height: 40px;
+
+        border: 0;
+
+        border-radius: 9px;
+
+        background: #f1f5f9;
+
+        color: #64748b;
+
+        font-size: 25px;
+
+        cursor: pointer;
+      }
+
+      .students-modal-close:hover {
+        background: #e2e8f0;
+
+        color: #0f172a;
+      }
+
+      .students-modal-body {
+        padding: 24px;
+      }
+
+      .students-edit-field {
+        margin-bottom: 18px;
+      }
+
+      .students-edit-field:last-child {
+        margin-bottom: 0;
+      }
+
+      .students-edit-field label {
+        display: block;
+
+        margin-bottom: 8px;
+
+        color: #334155;
+
+        font-size: 14px;
+
+        font-weight: 600;
+      }
+
+      .students-edit-field input {
+        width: 100%;
+
+        min-height: 46px;
+
+        padding: 0 13px;
+
+        border: 1px solid #cbd5e1;
+
+        border-radius: 8px;
+
+        background: white;
+
+        color: #0f172a;
+
+        font-size: 14px;
+
+        outline: none;
+      }
+
+      .students-edit-field input:focus {
+        border-color: #2563eb;
+
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .students-edit-field small {
+        display: block;
+
+        margin-top: 7px;
+
+        color: #94a3b8;
+
+        font-size: 12px;
+      }
+
+      .students-modal-footer {
+        display: flex;
+
+        justify-content: flex-end;
+
+        gap: 10px;
+
+        padding: 18px 24px;
+
+        border-top: 1px solid #e2e8f0;
+
+        background: #f8fafc;
+      }
+
+      .students-modal-cancel,
+      .students-modal-save {
+        min-height: 42px;
+
+        padding: 0 18px;
+
+        border-radius: 8px;
+
+        font-size: 14px;
+
+        font-weight: 600;
+
+        cursor: pointer;
+      }
+
+      .students-modal-cancel {
+        border: 1px solid #cbd5e1;
+
+        background: white;
+
+        color: #475569;
+      }
+
+      .students-modal-save {
+        border: 0;
+
+        background: #2563eb;
+
+        color: white;
+      }
+
+      .students-modal-save:hover {
+        background: #1d4ed8;
+      }
+
+      .students-modal-save:disabled {
+        opacity: 0.6;
+
+        cursor: not-allowed;
+      }
+
+      @media (max-width: 1350px) {
+        .students-add-form {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .students-add-button {
+          width: 100%;
         }
       }
 
+      @media (max-width: 760px) {
+        .students-sidebar {
+          position: static;
+
+          width: 100%;
+        }
+
+        .students-logout {
+          position: static;
+
+          width: 100%;
+
+          margin-top: 15px;
+        }
+
+        .students-content {
+          margin-left: 0;
+
+          padding: 20px;
+        }
+
+        .students-add-form {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body class="students-admin-page">
+    <!-- SIDEBAR -->
+
+    <aside class="students-sidebar">
+      <div class="students-sidebar-brand">
+        <h2>Quiz System</h2>
+
+        <p>Quản trị hệ thống</p>
+      </div>
+
+      <nav class="students-sidebar-nav">
+        <a href="/admin-dashboard.html"> Tổng quan </a>
+
+        <a href="/admin-quizzes.html"> Quản lý đề thi </a>
+
+        <a href="/admin-questions.html"> Quản lý câu hỏi </a>
+
+        <a href="/admin-students.html" class="active"> Quản lý sinh viên </a>
+
+        <a href="/admin-results.html"> Kết quả thi </a>
+      </nav>
+
+      <button type="button" class="students-logout" onclick="logout()">
+        Đăng xuất
+      </button>
+    </aside>
+
+    <!-- MAIN -->
+
+    <main class="students-content">
+      <div class="students-page-header">
+        <h1>Quản lý sinh viên</h1>
+
+        <p>Tạo và quản lý tài khoản sinh viên tham gia hệ thống thi.</p>
+      </div>
+
+      <!-- ADD STUDENT -->
+
+      <section class="students-card">
+        <div class="students-card-title">
+          <h2>Thêm sinh viên mới</h2>
+
+          <p>Tạo tài khoản đăng nhập cho sinh viên.</p>
+        </div>
+
+        <div class="students-add-form">
+          <div class="students-field">
+            <label> Họ và tên </label>
+
+            <input
+              id="studentFullName"
+              type="text"
+              placeholder="Họ và tên sinh viên"
+            />
+          </div>
+
+          <div class="students-field">
+            <label> Mã sinh viên </label>
+
+            <input
+              id="studentCode"
+              type="text"
+              placeholder="Ví dụ: DTC245200061"
+            />
+          </div>
+
+          <div class="students-field">
+            <label> Tên đăng nhập </label>
+
+            <input
+              id="studentUsername"
+              type="text"
+              placeholder="Tên đăng nhập"
+            />
+          </div>
+
+          <div class="students-field">
+            <label> Mật khẩu </label>
+
+            <input
+              id="studentPassword"
+              type="password"
+              placeholder="Mật khẩu"
+            />
+          </div>
+
+          <button
+            type="button"
+            class="students-add-button"
+            onclick="addStudent()"
+          >
+            Thêm sinh viên
+          </button>
+        </div>
+
+        <div id="studentMessage" class="students-message"></div>
+      </section>
+
+      <!-- LIST -->
+
+      <section class="students-card">
+        <div class="students-card-title">
+          <h2>Danh sách sinh viên</h2>
+
+          <p>Chỉnh sửa hoặc xóa tài khoản sinh viên.</p>
+        </div>
+
+        <div class="students-table-wrapper">
+          <table class="students-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+
+                <th>Họ tên</th>
+
+                <th>Mã sinh viên</th>
+
+                <th>Tên đăng nhập</th>
+
+                <th>Ngày tạo</th>
+
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+
+            <tbody id="studentTableBody">
+              <tr>
+                <td colspan="6" class="students-empty">Đang tải dữ liệu...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- EDIT MODAL -->
+
+    <div id="editStudentModal" class="students-modal">
+      <div class="students-modal-box">
+        <div class="students-modal-header">
+          <div>
+            <h2>Chỉnh sửa sinh viên</h2>
+
+            <p>Cập nhật thông tin tài khoản sinh viên.</p>
+          </div>
+
+          <button
+            type="button"
+            class="students-modal-close"
+            onclick="closeEditStudentModal()"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="students-modal-body">
+          <input id="editStudentId" type="hidden" />
+
+          <div class="students-edit-field">
+            <label> Họ và tên </label>
+
+            <input
+              id="editStudentFullName"
+              type="text"
+              placeholder="Họ và tên sinh viên"
+            />
+          </div>
+
+          <div class="students-edit-field">
+            <label> Mã sinh viên </label>
+
+            <input
+              id="editStudentCode"
+              type="text"
+              placeholder="Ví dụ: DTC245200061"
+            />
+          </div>
+
+          <div class="students-edit-field">
+            <label> Tên đăng nhập </label>
+
+            <input
+              id="editStudentUsername"
+              type="text"
+              placeholder="Tên đăng nhập"
+            />
+          </div>
+
+          <div class="students-edit-field">
+            <label> Mật khẩu mới </label>
+
+            <input
+              id="editStudentPassword"
+              type="password"
+              placeholder="Để trống nếu không đổi"
+            />
+
+            <small> Nếu không muốn thay đổi mật khẩu thì để trống. </small>
+          </div>
+        </div>
+
+        <div class="students-modal-footer">
+          <button
+            type="button"
+            class="students-modal-cancel"
+            onclick="closeEditStudentModal()"
+          >
+            Hủy
+          </button>
+
+          <button
+            id="saveStudentButton"
+            type="button"
+            class="students-modal-save"
+            onclick="saveEditedStudent()"
+          >
+            Lưu thay đổi
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // =====================================================
+      // LOGIN CHECK
+      // =====================================================
+
+      const currentUser = JSON.parse(localStorage.getItem("quiz_user"));
+
+      if (!currentUser || currentUser.role !== "admin") {
+        window.location.href = "/login.html";
+      }
+
+      let students = [];
+
+      // =====================================================
+      // LOGOUT
+      // =====================================================
+
+      function logout() {
+        localStorage.removeItem("quiz_user");
+
+        window.location.href = "/login.html";
+      }
+
+      // =====================================================
+      // MESSAGE
+      // =====================================================
+
+      function showMessage(message, type = "success") {
+        const element = document.getElementById("studentMessage");
+
+        element.textContent = message;
+
+        element.className = `students-message show ${type}`;
+
+        setTimeout(() => {
+          element.className = "students-message";
+        }, 3500);
+      }
+
+      // =====================================================
+      // LOAD STUDENTS
+      // =====================================================
+
+      async function loadStudents() {
+        const tableBody = document.getElementById("studentTableBody");
+
+        tableBody.innerHTML = `
+      <tr>
+
+        <td
+          colspan="6"
+          class="students-empty"
+        >
+          Đang tải dữ liệu...
+        </td>
+
+      </tr>
+    `;
+
+        try {
+          const response = await fetch("/api/admin/students");
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.error || "Không tải được danh sách sinh viên.",
+            );
+          }
+
+          students = Array.isArray(data) ? data : [];
+
+          renderStudents();
+        } catch (error) {
+          console.error(error);
+
+          tableBody.innerHTML = `
+        <tr>
+
+          <td
+            colspan="6"
+            class="students-empty"
+          >
+            Không tải được danh sách sinh viên.
+          </td>
+
+        </tr>
+      `;
+        }
+      }
+
+      // =====================================================
+      // RENDER STUDENTS
+      // =====================================================
+
+      function renderStudents() {
+        const tableBody = document.getElementById("studentTableBody");
+
+        tableBody.innerHTML = "";
+
+        if (students.length === 0) {
+          tableBody.innerHTML = `
+        <tr>
+
+          <td
+            colspan="6"
+            class="students-empty"
+          >
+            Chưa có sinh viên.
+          </td>
+
+        </tr>
+      `;
+
+          return;
+        }
+
+        students.forEach((student) => {
+          const row = document.createElement("tr");
+
+          let studentCodeHtml;
+
+          if (student.student_code) {
+            studentCodeHtml = `
+            <span class="student-code-value">
+              ${escapeHtml(student.student_code)}
+            </span>
+          `;
+          } else {
+            studentCodeHtml = `
+            <span class="student-code-empty">
+              Chưa cập nhật
+            </span>
+          `;
+          }
+
+          row.innerHTML = `
+
+          <td>
+            ${student.id}
+          </td>
+
+          <td>
+            ${escapeHtml(student.full_name)}
+          </td>
+
+          <td>
+            ${studentCodeHtml}
+          </td>
+
+          <td>
+            ${escapeHtml(student.username)}
+          </td>
+
+          <td>
+            ${formatDate(student.created_at)}
+          </td>
+
+          <td>
+
+            <div class="students-actions">
+
+              <button
+                type="button"
+                class="students-edit-button"
+                onclick="openEditStudentModal(${student.id})"
+              >
+                Sửa
+              </button>
+
+              <button
+                type="button"
+                class="students-delete-button"
+                onclick="deleteStudent(${student.id})"
+              >
+                Xóa
+              </button>
+
+            </div>
+
+          </td>
+        `;
+
+          tableBody.appendChild(row);
+        });
+      }
+
+      // =====================================================
+      // ADD STUDENT
+      // =====================================================
+
       async function addStudent() {
-        const fullName = document.getElementById("fullName").value.trim();
+        const fullName = document
+          .getElementById("studentFullName")
+          .value.trim();
 
-        const username = document.getElementById("username").value.trim();
+        const studentCode = document.getElementById("studentCode").value.trim();
 
-        const password = document.getElementById("password").value;
+        const username = document
+          .getElementById("studentUsername")
+          .value.trim();
 
-        if (!fullName || !username || !password) {
-          alert("Vui lòng nhập đầy đủ thông tin.");
+        const password = document.getElementById("studentPassword").value;
+
+        if (!fullName) {
+          showMessage("Vui lòng nhập họ và tên sinh viên.", "error");
+
+          return;
+        }
+
+        if (!studentCode) {
+          showMessage("Vui lòng nhập mã sinh viên.", "error");
+
+          return;
+        }
+
+        if (!username) {
+          showMessage("Vui lòng nhập tên đăng nhập.", "error");
+
+          return;
+        }
+
+        if (!password) {
+          showMessage("Vui lòng nhập mật khẩu.", "error");
+
           return;
         }
 
@@ -173,56 +1146,155 @@
             },
 
             body: JSON.stringify({
-              fullName,
-              username,
-              password,
+              fullName: fullName,
+
+              studentCode: studentCode,
+
+              username: username,
+
+              password: password,
             }),
           });
 
-          const data = await response.json();
+          const result = await response.json();
 
           if (!response.ok) {
-            alert(data.error || "Không thể thêm sinh viên.");
-            return;
+            throw new Error(result.error || "Không thể thêm sinh viên.");
           }
 
-          alert("Thêm sinh viên thành công.");
+          document.getElementById("studentFullName").value = "";
 
-          document.getElementById("fullName").value = "";
-          document.getElementById("username").value = "";
-          document.getElementById("password").value = "";
+          document.getElementById("studentCode").value = "";
 
-          loadStudents();
+          document.getElementById("studentUsername").value = "";
+
+          document.getElementById("studentPassword").value = "";
+
+          showMessage("Thêm sinh viên thành công.", "success");
+
+          await loadStudents();
         } catch (error) {
           console.error(error);
 
-          alert("Không thể kết nối đến máy chủ.");
+          showMessage(error.message || "Không thể thêm sinh viên.", "error");
         }
       }
 
-      async function editStudent(id, oldFullName, oldUsername) {
-        const fullName = prompt("Họ và tên:", oldFullName);
+      // =====================================================
+      // OPEN EDIT
+      // =====================================================
 
-        if (fullName === null) {
+      function openEditStudentModal(studentId) {
+        const student = students.find(
+          (item) => Number(item.id) === Number(studentId),
+        );
+
+        if (!student) {
+          alert("Không tìm thấy sinh viên.");
+
           return;
         }
 
-        const username = prompt("Tên đăng nhập:", oldUsername);
+        document.getElementById("editStudentId").value = student.id;
 
-        if (username === null) {
+        document.getElementById("editStudentFullName").value =
+          student.full_name || "";
+
+        document.getElementById("editStudentCode").value =
+          student.student_code || "";
+
+        document.getElementById("editStudentUsername").value =
+          student.username || "";
+
+        document.getElementById("editStudentPassword").value = "";
+
+        document.getElementById("editStudentModal").classList.add("show");
+
+        setTimeout(() => {
+          document.getElementById("editStudentFullName").focus();
+        }, 100);
+      }
+
+      // =====================================================
+      // CLOSE EDIT
+      // =====================================================
+
+      function closeEditStudentModal() {
+        document.getElementById("editStudentModal").classList.remove("show");
+
+        document.getElementById("editStudentId").value = "";
+
+        document.getElementById("editStudentFullName").value = "";
+
+        document.getElementById("editStudentCode").value = "";
+
+        document.getElementById("editStudentUsername").value = "";
+
+        document.getElementById("editStudentPassword").value = "";
+      }
+
+      // =====================================================
+      // SAVE EDIT
+      // =====================================================
+
+      async function saveEditedStudent() {
+        const id = document.getElementById("editStudentId").value;
+
+        const fullName = document
+          .getElementById("editStudentFullName")
+          .value.trim();
+
+        const studentCode = document
+          .getElementById("editStudentCode")
+          .value.trim();
+
+        const username = document
+          .getElementById("editStudentUsername")
+          .value.trim();
+
+        const password = document.getElementById("editStudentPassword").value;
+
+        if (!id) {
+          alert("Không xác định được sinh viên.");
+
           return;
         }
 
-        const password = prompt("Mật khẩu mới (để trống nếu không đổi):", "");
+        if (!fullName) {
+          alert("Vui lòng nhập họ và tên.");
 
-        if (password === null) {
           return;
         }
 
-        if (!fullName.trim() || !username.trim()) {
-          alert("Họ tên và tên đăng nhập không được để trống.");
+        if (!studentCode) {
+          alert("Vui lòng nhập mã sinh viên.");
+
           return;
         }
+
+        if (!username) {
+          alert("Vui lòng nhập tên đăng nhập.");
+
+          return;
+        }
+
+        const body = {
+          fullName: fullName,
+
+          studentCode: studentCode,
+
+          username: username,
+        };
+
+        if (password.trim() !== "") {
+          body.password = password;
+        }
+
+        const button = document.getElementById("saveStudentButton");
+
+        button.disabled = true;
+
+        button.textContent = "Đang lưu...";
 
         try {
           const response = await fetch(`/api/admin/students/${id}`, {
@@ -232,65 +1304,127 @@
               "Content-Type": "application/json",
             },
 
-            body: JSON.stringify({
-              fullName: fullName.trim(),
-              username: username.trim(),
-              password,
-            }),
+            body: JSON.stringify(body),
           });
 
-          const data = await response.json();
+          const result = await response.json();
 
           if (!response.ok) {
-            alert(data.error || "Không thể cập nhật sinh viên.");
-            return;
+            throw new Error(result.error || "Không thể cập nhật sinh viên.");
           }
 
-          alert("Cập nhật sinh viên thành công.");
+          closeEditStudentModal();
 
-          loadStudents();
+          showMessage("Cập nhật sinh viên thành công.", "success");
+
+          await loadStudents();
         } catch (error) {
           console.error(error);
 
-          alert("Không thể kết nối đến máy chủ.");
+          alert(error.message || "Không thể cập nhật sinh viên.");
+        } finally {
+          button.disabled = false;
+
+          button.textContent = "Lưu thay đổi";
         }
       }
 
-      async function deleteStudent(id) {
-        const ok = confirm("Bạn có chắc muốn xóa sinh viên này?");
+      // =====================================================
+      // DELETE STUDENT
+      // =====================================================
 
-        if (!ok) {
+      async function deleteStudent(studentId) {
+        const student = students.find(
+          (item) => Number(item.id) === Number(studentId),
+        );
+
+        const studentName = student ? student.full_name : "sinh viên này";
+
+        const confirmed = confirm(
+          `Bạn có chắc chắn muốn xóa "${studentName}"?`,
+        );
+
+        if (!confirmed) {
           return;
         }
 
         try {
-          const response = await fetch(`/api/admin/students/${id}`, {
+          const response = await fetch(`/api/admin/students/${studentId}`, {
             method: "DELETE",
           });
 
-          const data = await response.json();
+          const result = await response.json();
 
           if (!response.ok) {
-            alert(data.error || "Không thể xóa sinh viên.");
-            return;
+            throw new Error(result.error || "Không thể xóa sinh viên.");
           }
 
-          alert("Xóa sinh viên thành công.");
+          showMessage("Xóa sinh viên thành công.", "success");
 
-          loadStudents();
+          await loadStudents();
         } catch (error) {
           console.error(error);
 
-          alert("Không thể kết nối đến máy chủ.");
+          showMessage(error.message || "Không thể xóa sinh viên.", "error");
         }
       }
 
-      function escapeText(text) {
-        return String(text)
-          .replace(/\\/g, "\\\\")
-          .replace(/'/g, "\\'")
-          .replace(/\n/g, " ");
+      // =====================================================
+      // FORMAT DATE
+      // =====================================================
+
+      function formatDate(value) {
+        if (!value) {
+          return "";
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+          return escapeHtml(value);
+        }
+
+        return date.toLocaleString("vi-VN");
       }
+
+      // =====================================================
+      // ESCAPE HTML
+      // =====================================================
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // =====================================================
+      // CLICK OUTSIDE MODAL
+      // =====================================================
+
+      document
+        .getElementById("editStudentModal")
+        .addEventListener("click", function (event) {
+          if (event.target === this) {
+            closeEditStudentModal();
+          }
+        });
+
+      // =====================================================
+      // ESC
+      // =====================================================
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeEditStudentModal();
+        }
+      });
+
+      // =====================================================
+      // START
+      // =====================================================
 
       loadStudents();
     </script>
